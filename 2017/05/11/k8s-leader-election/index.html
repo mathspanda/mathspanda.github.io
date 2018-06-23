@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="docker,kubernetes," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="最近在写一个 kubernetes 的 addon，原理与 controller-manager 差不多。考虑到 addon 的高可用性需要将 kubernetes 源码包中的 leaderelection 包(k8s.io/kubernetes/pkg/client/leaderelection)移植到 client-go 中供调用，于是顺带分析了下这部分源码。  源码版本为 kubernete">
+<meta name="keywords" content="docker,kubernetes">
+<meta property="og:type" content="article">
+<meta property="og:title" content="kubernetes leader election 源码分析">
+<meta property="og:url" content="http://yoursite.com/2017/05/11/k8s-leader-election/index.html">
+<meta property="og:site_name" content="mathspandaの博客">
+<meta property="og:description" content="最近在写一个 kubernetes 的 addon，原理与 controller-manager 差不多。考虑到 addon 的高可用性需要将 kubernetes 源码包中的 leaderelection 包(k8s.io/kubernetes/pkg/client/leaderelection)移植到 client-go 中供调用，于是顺带分析了下这部分源码。  源码版本为 kubernete">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-06-23T14:14:34.270Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="kubernetes leader election 源码分析">
+<meta name="twitter:description" content="最近在写一个 kubernetes 的 addon，原理与 controller-manager 差不多。考虑到 addon 的高可用性需要将 kubernetes 源码包中的 leaderelection 包(k8s.io/kubernetes/pkg/client/leaderelection)移植到 client-go 中供调用，于是顺带分析了下这部分源码。  源码版本为 kubernete">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2017/05/11/k8s-leader-election/"/>
+
+
+
+
+
+  <title>kubernetes leader election 源码分析 | mathspandaの博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">mathspandaの博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-readings">
+          <a href="/readings/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-book"></i> <br />
+            
+            读书
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/05/11/k8s-leader-election/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="mathspanda">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="http://img.qqzhi.com/upload/img_5_1850635257D4274074374_23.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mathspandaの博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">kubernetes leader election 源码分析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-05-11T16:18:25+08:00">
+                2017-05-11
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>最近在写一个 kubernetes 的 addon，原理与 controller-manager 差不多。考虑到 addon 的高可用性需要将 kubernetes 源码包中的 leaderelection 包(k8s.io/kubernetes/pkg/client/leaderelection)移植到 client-go 中供调用，于是顺带分析了下这部分源码。</p>
+<blockquote>
+<p>源码版本为 kubernetes release-1.5</p>
+</blockquote>
+<a id="more"></a>
+<p>controller-manager 与 scheduler 在启动的时候均可以添加<code>--leader-elect</code>参数以实现高可用性。原理大致与 HDFS 选主类似：抢占锁节点成为 leader，定时心跳保持 alive，leader 故障触发锁节点失效条件，non-leader 发起新一轮 leader election。</p>
+<p>对于 HDFS 选主来说，锁节点指的是 Zookeeper 特定位置创建的一个临时节点<code>ActiveStandbyElectorLock</code>。任一 NameNode 率先创建该节点并写入自身信息即成为 Active NameNode（Zookeeper 的 API 与一致性保证了同一时间只会有一个 NameNode 创建该节点成功），剩余的 NameNode 成为 Standby NameNode，并在该临时节点上注册 Watcher。当 Active NameNode 因为某些原因跪了之后，考虑到临时 session 节点的特性，该节点会被删除，Standby NameNode 通过 Watcher 接收到节点删除事件，发起新一轮选举。</p>
+<p>对于 k8s 的选主来说，锁节点指的是 kube-system 命名空间下的同名 endpoint。任一 goroutine 如果能成功在该 ep 的 annotation 中留下自身记号即成为 leader。成为 leader 后会定时续约，更新 annotation 中的相关过期时间戳。non-leader 们会定时去获取该 ep 的 annotation，若发现过期等情况则进行抢占。</p>
+<blockquote>
+<p>leader 凭证主要有锁和租约两种。以我的理解，k8s 的 leader 凭证算是锁这一类的，强调主动性，主动去抢占写 ep 的 annotation。而 lease 租约更多是一种由某个机构主动颁发 lease，candidate 被动获得租约并成为 leader 的过程。</p>
+</blockquote>
+<h2 id="client-启动参数"><a href="#client-启动参数" class="headerlink" title="client 启动参数"></a>client 启动参数</h2><p>controller-manager 及 scheduler 中与 leader election 相关的启动参数有以下四个：</p>
+<ul>
+<li>leader-elect: 是否开启选举功能</li>
+<li>leader-elect-lease-duration: 锁的失效时间，类似于 session-timeout</li>
+<li>leader-elect-renew-deadline: leader 的心跳间隔，必须小于等于 lease-duration</li>
+<li>leader-elect-retry-period: non-leader 每隔 retry-period 尝试获取锁</li>
+</ul>
+<h2 id="ResourceLock"><a href="#ResourceLock" class="headerlink" title="ResourceLock"></a>ResourceLock</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// k8s.io/kubernetes/pkg/client/leaderelection/resourcelock/interface.go</span></span><br><span class="line"><span class="keyword">const</span> LeaderElectionRecordAnnotationKey = <span class="string">"control-plane.alpha.kubernetes.io/leader"</span></span><br><span class="line"><span class="keyword">type</span> LeaderElectionRecord <span class="keyword">struct</span> &#123;</span><br><span class="line">  <span class="comment">// leader 标识，通常为 hostname</span></span><br><span class="line">  HolderIdentity       <span class="keyword">string</span>           <span class="string">`json:"holderIdentity"`</span></span><br><span class="line">  <span class="comment">// 同启动参数 --leader-elect-lease-duration</span></span><br><span class="line">  LeaseDurationSeconds <span class="keyword">int</span>              <span class="string">`json:"leaseDurationSeconds"`</span></span><br><span class="line">  <span class="comment">// Leader 第一次成功获得租约时的时间戳</span></span><br><span class="line">  AcquireTime          unversioned.Time <span class="string">`json:"acquireTime"`</span></span><br><span class="line">  <span class="comment">// leader 定时 renew 的时间戳</span></span><br><span class="line">  RenewTime            unversioned.Time <span class="string">`json:"renewTime"`</span></span><br><span class="line">  LeaderTransitions    <span class="keyword">int</span>              <span class="string">`json:"leaderTransitions"`</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>leader 会在 kube-system namespace 下的同名 endpoint 的 annotations 中写入 key 值为<code>LeaderElectionRecordAnnotationKey</code>，value 为<code>LeaderElectionRecord</code>类型的记录，表明自己身份的同时会根据 –leader-elect-renew-deadline 参数定期去更新记录中的 RenewTime 字段（续约，合同年限为 LeaseDurationSeconds）。</p>
+<p>lease 租约在分布式系统中的很多地方都有应用，如分布式锁、一致性问题等。租约机制可以一定程度上避免双主问题，确保同一时刻最多只有一个 leader。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// k8s.io/kubernetes/pkg/client/leaderelection/resourcelock/interface.go</span></span><br><span class="line"><span class="keyword">type</span> Interface <span class="keyword">interface</span> &#123;</span><br><span class="line">  <span class="comment">// 获取、创建、更新 annotations 中的选举记录</span></span><br><span class="line">  Get() (*LeaderElectionRecord, error)</span><br><span class="line">  Create(ler LeaderElectionRecord) error</span><br><span class="line">  Update(ler LeaderElectionRecord) error</span><br><span class="line">  RecordEvent(<span class="keyword">string</span>)</span><br><span class="line">  Identity() <span class="keyword">string</span></span><br><span class="line">  <span class="comment">// endpoint namespace/name</span></span><br><span class="line">  Describe() <span class="keyword">string</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>k8s 中的选举锁需实现 resourcelock.Interface 接口，1.5 版本中实现的只有 endspointslock，不过貌似最近有 configmaplock 的 PR。endpointslock 实现该接口以实现 annotations 中 LeaderElectionRecord 的获取、创建、更新等功能，代码实现较为简单，不作详述。</p>
+<h2 id="LeaderElection"><a href="#LeaderElection" class="headerlink" title="LeaderElection"></a>LeaderElection</h2><h3 id="LeaderElector"><a href="#LeaderElector" class="headerlink" title="LeaderElector"></a>LeaderElector</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// k8s.io/kubernetes/pkg/client/leaderelection/leaderelection.go</span></span><br><span class="line"><span class="keyword">type</span> LeaderElector <span class="keyword">struct</span> &#123;</span><br><span class="line">  <span class="comment">// 配置，基本同启动参数</span></span><br><span class="line">  config LeaderElectionConfig</span><br><span class="line">  <span class="comment">// 租约缓存</span></span><br><span class="line">  observedRecord rl.LeaderElectionRecord</span><br><span class="line">  <span class="comment">// 观察到租约缓存时的时间戳，用以判断租约是否到期</span></span><br><span class="line">  observedTime   time.Time</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Leader-Election-Run"><a href="#Leader-Election-Run" class="headerlink" title="Leader Election Run"></a>Leader Election Run</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// k8s.io/kubernetes/pkg/client/leaderelection/leaderelection.go</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(le *LeaderElector)</span> <span class="title">Run</span><span class="params">()</span></span> &#123;</span><br><span class="line">  <span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">    runtime.HandleCrash()</span><br><span class="line">    le.config.Callbacks.OnStoppedLeading()</span><br><span class="line">  &#125;()</span><br><span class="line">  <span class="comment">// 获取租约，若获取不到则陷入定时循环获取租约，不执行下一条语句</span></span><br><span class="line">  le.acquire()</span><br><span class="line">  stop := <span class="built_in">make</span>(<span class="keyword">chan</span> <span class="keyword">struct</span>&#123;&#125;)</span><br><span class="line">  <span class="comment">// 成功获得租约，调用回调函数执行 leader goroutine 要干的活儿</span></span><br><span class="line">  <span class="keyword">go</span> le.config.Callbacks.OnStartedLeading(stop)</span><br><span class="line">  <span class="comment">// 定时循环刷新租约，若刷新失败则说明被抢占了 leader，退出循环</span></span><br><span class="line">  le.renew()</span><br><span class="line">  <span class="comment">// 已不再是 leader，关闭 stop chan，停止干活儿</span></span><br><span class="line">  <span class="built_in">close</span>(stop)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="acruire-amp-amp-renew"><a href="#acruire-amp-amp-renew" class="headerlink" title="acruire &amp;&amp; renew"></a>acruire &amp;&amp; renew</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// k8s.io/kubernetes/pkg/client/leaderelection/leaderelection.go</span></span><br><span class="line"><span class="comment">// 定时尝试获取租约，成功获得租约则立即退出函数</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(le *LeaderElector)</span> <span class="title">acquire</span><span class="params">()</span></span> &#123;</span><br><span class="line">   <span class="comment">// 创建 stop chan，若成功获得租约，则关闭 stop chan，退出循环</span></span><br><span class="line">  stop := <span class="built_in">make</span>(<span class="keyword">chan</span> <span class="keyword">struct</span>&#123;&#125;)</span><br><span class="line">  wait.JitterUntil(<span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">    succeeded := le.tryAcquireOrRenew()</span><br><span class="line">    le.maybeReportTransition()</span><br><span class="line">    desc := le.config.Lock.Describe()</span><br><span class="line">    <span class="comment">// 未能成功获得租约，进入下一定时循环</span></span><br><span class="line">    <span class="keyword">if</span> !succeeded &#123;</span><br><span class="line">      glog.V(<span class="number">4</span>).Infof(<span class="string">"failed to renew lease %v"</span>, desc)</span><br><span class="line">      <span class="keyword">return</span></span><br><span class="line">    &#125;</span><br><span class="line">    le.config.Lock.RecordEvent(<span class="string">"became leader"</span>)</span><br><span class="line">    glog.Infof(<span class="string">"sucessfully acquired lease %v"</span>, desc)</span><br><span class="line">    <span class="built_in">close</span>(stop)</span><br><span class="line">  &#125;, le.config.RetryPeriod, JitterFactor, <span class="literal">true</span>, stop)</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment">// 定时尝试续约，续约失败则立即退出函数</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(le *LeaderElector)</span> <span class="title">renew</span><span class="params">()</span></span> &#123;</span><br><span class="line">  stop := <span class="built_in">make</span>(<span class="keyword">chan</span> <span class="keyword">struct</span>&#123;&#125;)</span><br><span class="line">  wait.Until(<span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">    err := wait.Poll(le.config.RetryPeriod, le.config.RenewDeadline, <span class="function"><span class="keyword">func</span><span class="params">()</span> <span class="params">(<span class="keyword">bool</span>, error)</span></span> &#123;</span><br><span class="line">      <span class="keyword">return</span> le.tryAcquireOrRenew(), <span class="literal">nil</span></span><br><span class="line">    &#125;)</span><br><span class="line">    le.maybeReportTransition()</span><br><span class="line">    desc := le.config.Lock.Describe()</span><br><span class="line">    <span class="comment">// 续约成功，进入下一定时循环</span></span><br><span class="line">    <span class="keyword">if</span> err == <span class="literal">nil</span> &#123;</span><br><span class="line">      glog.V(<span class="number">4</span>).Infof(<span class="string">"succesfully renewed lease %v"</span>, desc)</span><br><span class="line">      <span class="keyword">return</span></span><br><span class="line">    &#125;</span><br><span class="line">    le.config.Lock.RecordEvent(<span class="string">"stopped leading"</span>)</span><br><span class="line">    <span class="comment">// 续约失败，关闭 stop chan，退出循环</span></span><br><span class="line">    glog.Infof(<span class="string">"failed to renew lease %v"</span>, desc)</span><br><span class="line">    <span class="built_in">close</span>(stop)</span><br><span class="line">  &#125;, <span class="number">0</span>, stop)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="tryAcquireOrRenew"><a href="#tryAcquireOrRenew" class="headerlink" title="tryAcquireOrRenew"></a>tryAcquireOrRenew</h3><p>tryAcquireOrRenew 函数尝试获取租约，如果获取不到或者得到的租约已过期则尝试抢占，否则 leader 不变。函数返回 True 说明本 goroutine 已成功抢占到锁，获得租约合同，成为 leader。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// k8s.io/kubernetes/pkg/client/leaderelection/leaderelection.go</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(le *LeaderElector)</span> <span class="title">tryAcquireOrRenew</span><span class="params">()</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">  <span class="comment">// 创建 leader election 租约</span></span><br><span class="line">  now := unversioned.Now()</span><br><span class="line">  leaderElectionRecord := rl.LeaderElectionRecord&#123;</span><br><span class="line">    HolderIdentity:       le.config.Lock.Identity(),</span><br><span class="line">    LeaseDurationSeconds: <span class="keyword">int</span>(le.config.LeaseDuration / time.Second),</span><br><span class="line">    RenewTime:            now,</span><br><span class="line">    AcquireTime:          now,</span><br><span class="line">  &#125;</span><br><span class="line"> </span><br><span class="line">  <span class="comment">// 1. 从 endpointslock 上获取 leader election 租约（kube-system 下同名 endpoint 的 annotation)</span></span><br><span class="line">  oldLeaderElectionRecord, err := le.config.Lock.Get()</span><br><span class="line">  <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">    <span class="comment">// 发生 error，且 error 不是租约不存在</span></span><br><span class="line">    <span class="keyword">if</span> !errors.IsNotFound(err) &#123;</span><br><span class="line">      glog.Errorf(<span class="string">"error retrieving resource lock %v: %v"</span>, le.config.Lock.Describe(), err)</span><br><span class="line">      <span class="keyword">return</span> <span class="literal">false</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 发生 error，但 error 正是租约不存在</span></span><br><span class="line">    <span class="comment">// 于是将函数一开始创建的 leader election 租约放入同名 endpoint 的 annotation 中</span></span><br><span class="line">    <span class="keyword">if</span> err = le.config.Lock.Create(leaderElectionRecord); err != <span class="literal">nil</span> &#123;</span><br><span class="line">       <span class="comment">// 创建失败，函数返回 false</span></span><br><span class="line">      glog.Errorf(<span class="string">"error initially creating leader election record: %v"</span>, err)</span><br><span class="line">      <span class="keyword">return</span> <span class="literal">false</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 创建成功，成为 leader，函数返回 true</span></span><br><span class="line">    le.observedRecord = leaderElectionRecord</span><br><span class="line">    le.observedTime = time.Now()</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span></span><br><span class="line">  &#125;</span><br><span class="line"> </span><br><span class="line">  <span class="comment">// 2. 更新本地缓存的租约，并更新观察时间戳，用来判断租约是否到期</span></span><br><span class="line">  <span class="keyword">if</span> !reflect.DeepEqual(le.observedRecord, *oldLeaderElectionRecord) &#123;</span><br><span class="line">    le.observedRecord = *oldLeaderElectionRecord</span><br><span class="line">    le.observedTime = time.Now()</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// leader 的租约尚未到期，自己暂时不能抢占它，函数返回 false</span></span><br><span class="line">  <span class="keyword">if</span> le.observedTime.Add(le.config.LeaseDuration).After(now.Time) &amp;&amp;</span><br><span class="line">    oldLeaderElectionRecord.HolderIdentity != le.config.Lock.Identity() &#123;</span><br><span class="line">    glog.Infof(<span class="string">"lock is held by %v and has not yet expired"</span>, oldLeaderElectionRecord.HolderIdentity)</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span></span><br><span class="line">  &#125;</span><br><span class="line"> </span><br><span class="line">  <span class="comment">// 3. 租约到期，而 leader 身份不变，因此当年获得租约的时间戳 AcquireTime 保持不变</span></span><br><span class="line">  <span class="keyword">if</span> oldLeaderElectionRecord.HolderIdentity == le.config.Lock.Identity() &#123;</span><br><span class="line">    leaderElectionRecord.AcquireTime = oldLeaderElectionRecord.AcquireTime</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">// 租约到期，leader 易主，transtions+1 说明 leader 更替了</span></span><br><span class="line">    leaderElectionRecord.LeaderTransitions = oldLeaderElectionRecord.LeaderTransitions + <span class="number">1</span></span><br><span class="line">  &#125;</span><br><span class="line"> </span><br><span class="line">  <span class="comment">// 尝试去更新租约记录</span></span><br><span class="line">  <span class="keyword">if</span> err = le.config.Lock.Update(leaderElectionRecord); err != <span class="literal">nil</span> &#123;</span><br><span class="line">     <span class="comment">// 更新失败，函数返回 false</span></span><br><span class="line">    glog.Errorf(<span class="string">"Failed to update lock: %v"</span>, err)</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span></span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 更新成功，函数返回 true</span></span><br><span class="line">  le.observedRecord = leaderElectionRecord</span><br><span class="line">  le.observedTime = time.Now()</span><br><span class="line">  <span class="keyword">return</span> <span class="literal">true</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="kube-controller-manager-选举的相关源码"><a href="#kube-controller-manager-选举的相关源码" class="headerlink" title="kube-controller-manager 选举的相关源码"></a>kube-controller-manager 选举的相关源码</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// k8s.io/kubernetes/cmd/kube-controller-manager/app/controllermanager.go</span></span><br><span class="line"><span class="comment">// 启动时在 kube-system namespace 下创建一个同名的 endpoint 作为 endpointslock</span></span><br><span class="line">rl := resourcelock.EndpointsLock&#123;</span><br><span class="line">  EndpointsMeta: api.ObjectMeta&#123;</span><br><span class="line">    Namespace: <span class="string">"kube-system"</span>,</span><br><span class="line">    Name:      <span class="string">"kube-controller-manager"</span>,</span><br><span class="line">  &#125;,</span><br><span class="line">  Client: leaderElectionClient,</span><br><span class="line">  LockConfig: resourcelock.ResourceLockConfig&#123;</span><br><span class="line">    <span class="comment">// id = os.Hostname()</span></span><br><span class="line">    Identity:      id,</span><br><span class="line">    EventRecorder: recorder,</span><br><span class="line">  &#125;,</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 开启选举流程</span></span><br><span class="line">leaderelection.RunOrDie(leaderelection.LeaderElectionConfig&#123;</span><br><span class="line">  Lock:          &amp;rl,</span><br><span class="line">  LeaseDuration: s.LeaderElection.LeaseDuration.Duration,</span><br><span class="line">  RenewDeadline: s.LeaderElection.RenewDeadline.Duration,</span><br><span class="line">  RetryPeriod:   s.LeaderElection.RetryPeriod.Duration,</span><br><span class="line">  Callbacks: leaderelection.LeaderCallbacks&#123;</span><br><span class="line">    <span class="comment">// 成为 leader 后调用 run 函数启动各 controller goroutine</span></span><br><span class="line">    OnStartedLeading: run,</span><br><span class="line">    OnStoppedLeading: <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">      glog.Fatalf(<span class="string">"leaderelection lost"</span>)</span><br><span class="line">    &#125;,</span><br><span class="line">  &#125;,</span><br><span class="line">&#125;)</span><br><span class="line"><span class="built_in">panic</span>(<span class="string">"unreachable"</span>)</span><br></pre></td></tr></table></figure>
+<p>kube-scheduler 的相关源码基本类似，仅仅是 endpointslock 的名字改成 kube-scheduler，Callbacks 中的 run 函数改成了 scheduler 的启动函数 scheduler.Run()，启动 goroutine 执行调度流程。</p>
+<blockquote>
+<p>从 leaderelection.go 源代码文件最上面的注释可以看到，这种选举的实现并不能保证不会出现脑裂的情况，即可能在某一时间点会有多个 client 同时扮演 leader 角色。client 是利用本地的时间戳去推测选举情况的，可以通过适当调整 RenewDeadline 与 LeaseDuration 或者架设 ntp 来解决。</p>
+</blockquote>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/docker/" rel="tag"># docker</a>
+          
+            <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/11/13/docker-gitlab-jekins/" rel="next" title="使用 GitLab/Jenkins/Registry on Docker 搭建 CI/CD 环境">
+                <i class="fa fa-chevron-left"></i> 使用 GitLab/Jenkins/Registry on Docker 搭建 CI/CD 环境
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="http://img.qqzhi.com/upload/img_5_1850635257D4274074374_23.jpg"
+                alt="mathspanda" />
+            
+              <p class="site-author-name" itemprop="name">mathspanda</p>
+              <p class="site-description motion-element" itemprop="description">聪明人才知道自己是笨蛋</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/mathspanda" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:mathspanda826@gmail.com" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          <div id="music163player">
+            <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width=330 height=86 src="//music.163.com/outchain/player?type=2&id=536622304&auto=1&height=66">
+            </iframe>
+          </div>
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#client-启动参数"><span class="nav-number">1.</span> <span class="nav-text">client 启动参数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ResourceLock"><span class="nav-number">2.</span> <span class="nav-text">ResourceLock</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#LeaderElection"><span class="nav-number">3.</span> <span class="nav-text">LeaderElection</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#LeaderElector"><span class="nav-number">3.1.</span> <span class="nav-text">LeaderElector</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Leader-Election-Run"><span class="nav-number">3.2.</span> <span class="nav-text">Leader Election Run</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#acruire-amp-amp-renew"><span class="nav-number">3.3.</span> <span class="nav-text">acruire &amp;&amp; renew</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#tryAcquireOrRenew"><span class="nav-number">3.4.</span> <span class="nav-text">tryAcquireOrRenew</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#kube-controller-manager-选举的相关源码"><span class="nav-number">4.</span> <span class="nav-text">kube-controller-manager 选举的相关源码</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">mathspanda</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

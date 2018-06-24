@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="blog" />
+  <meta name="keywords" content="rabbitmq," />
 
 
 
@@ -79,17 +79,18 @@
 
 
 
-<meta name="description" content="聪明人才知道自己是笨蛋">
-<meta property="og:type" content="website">
-<meta property="og:title" content="标签">
-<meta property="og:url" content="http://yoursite.com/tags/index.html">
+<meta name="description" content="当 RabbitMQ 消息消费速度小于发布速度，抑或是系统本身的资源就不太够时，为避免机器资源饱和，RabbitMQ 会阻断 publishers 进行流控。流控无需相关参数控制开启，是 RabbitMQ 的默认行为。">
+<meta name="keywords" content="rabbitmq">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RabbitMQ 的 Flow Control 机制">
+<meta property="og:url" content="http://yoursite.com/2018/06/24/rabbitmq-flow-control/index.html">
 <meta property="og:site_name" content="mathspandaの博客">
-<meta property="og:description" content="聪明人才知道自己是笨蛋">
+<meta property="og:description" content="当 RabbitMQ 消息消费速度小于发布速度，抑或是系统本身的资源就不太够时，为避免机器资源饱和，RabbitMQ 会阻断 publishers 进行流控。流控无需相关参数控制开启，是 RabbitMQ 的默认行为。">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2018-06-23T14:51:45.056Z">
+<meta property="og:updated_time" content="2018-06-24T10:49:38.607Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="标签">
-<meta name="twitter:description" content="聪明人才知道自己是笨蛋">
+<meta name="twitter:title" content="RabbitMQ 的 Flow Control 机制">
+<meta name="twitter:description" content="当 RabbitMQ 消息消费速度小于发布速度，抑或是系统本身的资源就不太够时，为避免机器资源饱和，RabbitMQ 会阻断 publishers 进行流控。流控无需相关参数控制开启，是 RabbitMQ 的默认行为。">
 
 
 
@@ -119,13 +120,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/tags/"/>
+  <link rel="canonical" href="http://yoursite.com/2018/06/24/rabbitmq-flow-control/"/>
 
 
 
 
 
-  <title>标签 | mathspandaの博客</title>
+  <title>RabbitMQ 的 Flow Control 机制 | mathspandaの博客</title>
   
 
 
@@ -260,40 +261,190 @@
 
   <div id="posts" class="posts-expand">
     
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/06/24/rabbitmq-flow-control/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="mathspanda">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="http://img.qqzhi.com/upload/img_5_1850635257D4274074374_23.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="mathspandaの博客">
+    </span>
+
     
-    
-    <div class="post-block page">
       <header class="post-header">
 
-	<h1 class="post-title" itemprop="name headline">标签</h1>
-
-
-
-</header>
-
-      
-      
-      
-      <div class="post-body">
         
         
-          <div class="tag-cloud">
-            <div class="tag-cloud-title">
-                目前共计 6 个标签
-            </div>
-            <div class="tag-cloud-tags">
-              <a href="/tags/devops/" style="font-size: 12px; color: #ccc">devops</a> <a href="/tags/docker/" style="font-size: 30px; color: #111">docker</a> <a href="/tags/jenkins/" style="font-size: 12px; color: #ccc">jenkins</a> <a href="/tags/kubernetes/" style="font-size: 12px; color: #ccc">kubernetes</a> <a href="/tags/rabbitmq/" style="font-size: 12px; color: #ccc">rabbitmq</a>
-            </div>
-          </div>
+          <h1 class="post-title" itemprop="name headline">RabbitMQ 的 Flow Control 机制</h1>
         
-      </div>
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-06-24T17:13:20+08:00">
+                2018-06-24
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RabbitMQ/" itemprop="url" rel="index">
+                    <span itemprop="name">RabbitMQ</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
       
       
+
+      
+        <p>当 RabbitMQ 消息消费速度小于发布速度，抑或是系统本身的资源就不太够时，为避免机器资源饱和，RabbitMQ 会阻断 publishers 进行流控。流控无需相关参数控制开启，是 RabbitMQ 的默认行为。</p>
+<a id="more"></a>
+<h2 id="内存流控的相关参数"><a href="#内存流控的相关参数" class="headerlink" title="内存流控的相关参数"></a>内存流控的相关参数</h2><p><strong>total_memory_available_override_value</strong><br>系统内存值。默认情况下 RabbitMQ 启动时会推断该值的大小，在某些特殊环境下（如容器中）推断得到的值不大准确，需手动指定。</p>
+<p><strong>vm_memory_high_watermark</strong><br>触发流控的内存阈值。默认为 0.4，意味着如果系统内存值为 1GB，则 RabbitMQ Server 在使用了 400MB 左右的内存时会开始流控，阻塞 pulish 连接。参数值的设置有相对与绝对两种：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">vm_memory_high_watermark.relative = 0.6           </span><br><span class="line">vm_memory_high_watermark.absolute = 2GB</span><br></pre></td></tr></table></figure></p>
+<p>设置完成后，可在日志中找到相关的内存限制信息：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># vm_memory_high_watermark.relative = 0.4, total_memory_available_override_value = 700MB</span><br><span class="line">Memory high watermark set to 280 MiB (293601280 bytes) of 700 MiB (734003200 bytes) total</span><br></pre></td></tr></table></figure></p>
+<p>也可以在<code>rabbitmqctl status</code>的输出中找到：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line">  &#123;vm_memory_high_watermark,0.4&#125;,</span><br><span class="line">  &#123;vm_memory_limit,293601280&#125;,</span><br><span class="line">...</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>内存使用超过 40% 时，发出内存 alarm，阻塞连接；随着消息被消费或者被 page 到磁盘后，内存消耗降低，alarm 被撤销，publish 继续。</li>
+<li><code>rabbitmqctl set_vm_memory_high_watermark 0</code> 可禁止一切 publish 操作。</li>
+<li>默认设置为 0.4 是由于 Erlang 的垃圾回收机制在最坏情况下会导致内存消耗翻倍，即 80%。</li>
+<li>参数值的设置并不能完全限制住 RabbitMQ 的内存阈值。</li>
+</ul>
+<p>官方文档对生产环境下参数值设置的建议：</p>
+<ul>
+<li>RabbitMQ 所在的机器最好时刻拥有 128MB 的空闲内存。</li>
+<li>vm_memory_high_watermark 的推荐设置范围是 0.40 ~ 0.66。</li>
+<li>不建议大于 0.7，以防大 paging 导致 OS 性能的急剧下降。</li>
+</ul>
+<p><strong>vm_memory_high_watermark_paging_ratio</strong><br>相对 vm_memory_high_watermark 触发消息 paging 至磁盘的内存比值。默认为 0.5，如果 vm_memory_high_watermark 设置为 0.4，系统内存值为 1GB，则 RabbitMQ 内存使用超过 0.5&times;0.4&times;1GB=200MB 时开始 paging。</p>
+<h2 id="流控机制的相关原理"><a href="#流控机制的相关原理" class="headerlink" title="流控机制的相关原理"></a>流控机制的相关原理</h2><p>未完待续</p>
+<h2 id="References"><a href="#References" class="headerlink" title="References"></a>References</h2><ul>
+<li><a href="http://www.rabbitmq.com/configure.html" target="_blank" rel="noopener">http://www.rabbitmq.com/configure.html</a></li>
+<li><a href="http://www.rabbitmq.com/memory.html" target="_blank" rel="noopener">http://www.rabbitmq.com/memory.html</a></li>
+<li><a href="http://www.rabbitmq.com/production-checklist.html#resource-limits-ram" target="_blank" rel="noopener">http://www.rabbitmq.com/production-checklist.html#resource-limits-ram</a></li>
+</ul>
+
       
     </div>
     
     
     
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/rabbitmq/" rel="tag"># rabbitmq</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/05/11/k8s-leader-election/" rel="next" title="kubernetes leader election 源码分析">
+                <i class="fa fa-chevron-left"></i> kubernetes leader election 源码分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
   </div>
 
 
@@ -326,8 +477,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <section class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -412,6 +572,22 @@
         </div>
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#内存流控的相关参数"><span class="nav-number">1.</span> <span class="nav-text">内存流控的相关参数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#流控机制的相关原理"><span class="nav-number">2.</span> <span class="nav-text">流控机制的相关原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#References"><span class="nav-number">3.</span> <span class="nav-text">References</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       

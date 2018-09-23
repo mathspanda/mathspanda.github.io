@@ -79,18 +79,21 @@
 
 
 
-<meta name="description" content="当 RabbitMQ 消息消费速度小于发布速度，抑或是系统本身的资源就不太够时，为避免机器资源饱和，RabbitMQ 会阻断 publishers 进行流控。流控无需相关参数控制开启，是 RabbitMQ 的默认行为。">
+<meta name="description" content="最近尝试在将 RabbitMQ 搬上 Kubernetes 运行，因为有前车之鉴，担心 OOMKilled 的问题，特意调研一下 RabbitMQ 的流控机制。 当 RabbitMQ 消息消费速率小于发布速率，抑或是系统本身的资源就不太够时，为避免机器资源饱和，RabbitMQ 会阻断 publishers 进行流控。流控无需相关参数控制开启，这是 RabbitMQ 自身的默认行为。">
 <meta name="keywords" content="rabbitmq">
 <meta property="og:type" content="article">
 <meta property="og:title" content="RabbitMQ 之 Flow Control 机制">
 <meta property="og:url" content="http://yoursite.com/2018/06/24/rabbitmq-flow-control/index.html">
 <meta property="og:site_name" content="mathspandaの博客">
-<meta property="og:description" content="当 RabbitMQ 消息消费速度小于发布速度，抑或是系统本身的资源就不太够时，为避免机器资源饱和，RabbitMQ 会阻断 publishers 进行流控。流控无需相关参数控制开启，是 RabbitMQ 的默认行为。">
+<meta property="og:description" content="最近尝试在将 RabbitMQ 搬上 Kubernetes 运行，因为有前车之鉴，担心 OOMKilled 的问题，特意调研一下 RabbitMQ 的流控机制。 当 RabbitMQ 消息消费速率小于发布速率，抑或是系统本身的资源就不太够时，为避免机器资源饱和，RabbitMQ 会阻断 publishers 进行流控。流控无需相关参数控制开启，这是 RabbitMQ 自身的默认行为。">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2018-06-24T11:08:03.977Z">
+<meta property="og:image" content="http://opx9yhs83.bkt.clouddn.com/rabbit-flow.png">
+<meta property="og:image" content="http://opx9yhs83.bkt.clouddn.com/rabbit-process-model.png">
+<meta property="og:updated_time" content="2018-09-23T09:44:30.939Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="RabbitMQ 之 Flow Control 机制">
-<meta name="twitter:description" content="当 RabbitMQ 消息消费速度小于发布速度，抑或是系统本身的资源就不太够时，为避免机器资源饱和，RabbitMQ 会阻断 publishers 进行流控。流控无需相关参数控制开启，是 RabbitMQ 的默认行为。">
+<meta name="twitter:description" content="最近尝试在将 RabbitMQ 搬上 Kubernetes 运行，因为有前车之鉴，担心 OOMKilled 的问题，特意调研一下 RabbitMQ 的流控机制。 当 RabbitMQ 消息消费速率小于发布速率，抑或是系统本身的资源就不太够时，为避免机器资源饱和，RabbitMQ 会阻断 publishers 进行流控。流控无需相关参数控制开启，这是 RabbitMQ 自身的默认行为。">
+<meta name="twitter:image" content="http://opx9yhs83.bkt.clouddn.com/rabbit-flow.png">
 
 
 
@@ -362,10 +365,12 @@
       
 
       
-        <p>当 RabbitMQ 消息消费速度小于发布速度，抑或是系统本身的资源就不太够时，为避免机器资源饱和，RabbitMQ 会阻断 publishers 进行流控。流控无需相关参数控制开启，是 RabbitMQ 的默认行为。</p>
+        <p>最近尝试在将 RabbitMQ 搬上 Kubernetes 运行，因为有前车之鉴，担心 OOMKilled 的问题，特意调研一下 RabbitMQ 的流控机制。</p>
+<p>当 RabbitMQ 消息消费速率小于发布速率，抑或是系统本身的资源就不太够时，为避免机器资源饱和，RabbitMQ 会阻断 publishers 进行流控。流控无需相关参数控制开启，这是 RabbitMQ 自身的默认行为。</p>
 <a id="more"></a>
-<h2 id="内存流控的相关参数"><a href="#内存流控的相关参数" class="headerlink" title="内存流控的相关参数"></a>内存流控的相关参数</h2><p><strong>total_memory_available_override_value</strong><br>系统内存值。默认情况下 RabbitMQ 启动时会推断该值的大小，在某些特殊环境下（如容器中）推断得到的值不大准确，需手动指定。</p>
-<p><strong>vm_memory_high_watermark</strong><br>触发流控的内存阈值。默认为 0.4，意味着如果系统内存值为 1GB，则 RabbitMQ Server 在使用了 400MB 左右的内存时会开始流控，阻塞 pulish 连接。参数值的设置有相对与绝对两种：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">vm_memory_high_watermark.relative = 0.6           </span><br><span class="line">vm_memory_high_watermark.absolute = 2GB</span><br></pre></td></tr></table></figure></p>
+<h2 id="Memory-Based-Flow-Control"><a href="#Memory-Based-Flow-Control" class="headerlink" title="Memory-Based Flow Control"></a>Memory-Based Flow Control</h2><p>如同字面上的意思，对内存设置阈值，超出阈值后阻断发布连接，相关参数列举如下：</p>
+<p><strong>total_memory_available_override_value</strong><br>系统内存值。默认情况下 RabbitMQ 启动时会推断该值的大小，在某些特殊环境下推断得到的值不大准确，比如在容器内部可能得到的是宿主机的内存值，需手动指定。</p>
+<p><strong>vm_memory_high_watermark</strong><br>触发流控的内存阈值。默认为 0.4，意味着如果系统内存值为 1GB，则 RabbitMQ Server 在使用了 400MB 左右的内存时会阻断 pulish 连接。参数值的设置有相对与绝对两种：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">vm_memory_high_watermark.relative = 0.6           </span><br><span class="line">vm_memory_high_watermark.absolute = 2GB</span><br></pre></td></tr></table></figure></p>
 <p>设置完成后，可在日志中找到相关的内存限制信息：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># vm_memory_high_watermark.relative = 0.4, total_memory_available_override_value = 700MB</span><br><span class="line">Memory high watermark set to 280 MiB (293601280 bytes) of 700 MiB (734003200 bytes) total</span><br></pre></td></tr></table></figure></p>
 <p>也可以在<code>rabbitmqctl status</code>的输出中找到：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line">  &#123;vm_memory_high_watermark,0.4&#125;,</span><br><span class="line">  &#123;vm_memory_limit,293601280&#125;,</span><br><span class="line">...</span><br></pre></td></tr></table></figure></p>
 <ul>
@@ -381,11 +386,23 @@
 <li>不建议大于 0.7，以防大 paging 导致 OS 性能的急剧下降。</li>
 </ul>
 <p><strong>vm_memory_high_watermark_paging_ratio</strong><br>相对 vm_memory_high_watermark 触发消息 paging 至磁盘的内存比值。默认为 0.5，如果 vm_memory_high_watermark 设置为 0.4，系统内存值为 1GB，则 RabbitMQ 内存使用超过 0.5&times;0.4&times;1GB=200MB 时开始 paging。</p>
-<h2 id="流控机制的相关原理"><a href="#流控机制的相关原理" class="headerlink" title="流控机制的相关原理"></a>流控机制的相关原理</h2><p>未完待续</p>
+<p>当然，除了上述内存流控参数之外，还存在 <code>disk_free_limit</code> 等磁盘流控参数，具体说明可见官方文档。</p>
+<h2 id="Per-Connection-Flow-Control"><a href="#Per-Connection-Flow-Control" class="headerlink" title="Per-Connection Flow Control"></a>Per-Connection Flow Control</h2><p>针对消息消费速率不及发布速率这种情况，应用实现方应该更加关注应用逻辑，而不是 RabbitMQ。然而 RabbitMQ 本身应当提供一种流控机制，防止由于出现类似情况而导致 OutOfDisk 或者 OOMKilled。除了之前提到的对内存和磁盘设置阈值之外，RabbitMQ 还默认提供了一种基于 credit flow 的流控机制，面向每一个连接进行流控，以确保 RabbitMQ 本身的稳定性。</p>
+<p><img src="http://opx9yhs83.bkt.clouddn.com/rabbit-flow.png" alt="rabbitmq_connection_flow"></p>
+<p>RabbitMQ 由 Erlang 实现，消息从发布到最终被消费，会在 RabbitMQ 内部的多个进程间进行转发，大致的转发路径如下图：</p>
+<p><img src="http://opx9yhs83.bkt.clouddn.com/rabbit-process-model.png" alt="rabbitmq进程模型"></p>
+<p>rabbit_reader 接收 client 连接，解析 AMQP 帧；rabbit_channel 处理 AMQP 方法，路由消息；rabbit_amqqueue_process 作为队列进程，负责实现队列本身的所有逻辑，该进程数量一般与队列数目相同；rabbit_msg_store 负责消息持久化；rabbit_writer 向 client 返回数据。</p>
+<p>作为 Erlang 进程，每个进程均拥有自己的 mailbox，进程间通过消息进行通信。mailbox 大小默认不作设置，如果某进程由于负载较高来不及处理消息，则 mailbox 开始堆积消息，最终可能会内存溢出进而进程崩溃。RabbitMQ 实现了一种基于 credit flow 的流控机制，当 mailbox 中的消息堆积到一定程度时会阻塞上游进程，不得接收新消息，一级级向上阻塞，最终会导致源头负责接收网络数据包的进程阻塞，进而阻塞发布。</p>
+<p>每个消息处理进程拥有一个 credit 元组 <code>{InitialCredit, MoreCreditAfter}</code>，如果不调用 <code>credit_flow</code> API 调整值，默认为 <code>{200, 50}</code>。以进程 A 向进程 B 发送消息为例，A 的初始 credit 为 InitialCredit，A 每向 B 发送一条消息， A 的 credit 减 1，直到 credit 为 0 时 A 进程被阻塞；B 每收到 A 的 MoreCreditAfter 条消息后，会向 A 发送消息，授予 A MoreCreditAfter 个 credit。A 的 credit 大于 0 后恢复，继续向 B 发送消息。这些 credit 数量被记录在 Erlang 进程的进程字典（<a href="http://www.erlang.org/course/advanced#dict" target="_blank" rel="noopener">Process Dictionary</a>）中，相关字典键如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&#123;credit_to, pid()&#125;</span><br><span class="line">&#123;credit_from, pid()&#125;</span><br><span class="line">&#123;credit_deferred&#125;</span><br><span class="line">&#123;credit_blocked&#125;</span><br></pre></td></tr></table></figure></p>
+<p>A 用以记录 B 授予 credit 数量的条目以<code>{credit_from, From}</code>为键，From 为进程 B 的 Pid，如果<code>{credit_from, From}</code>对应的值为 0，则 A 被阻塞，记录在以<code>{credit_blocked}</code>为键的条目中。当然，A 可能会向多个进程发送消息，比方说进程 C，这时候会同时存在以<code>{credit_from, B}</code>以及<code>{credit_from, C}</code>为键的条目；A 也可能会同时被进程 B 和 C 阻塞，阻塞进程的键值对条目大致如 <code>{credit_blocked} -&gt; [B, C]</code>。只有当 B 和 C 均从<code>{credit_blocked}</code> 中移除，A 才会解除阻塞，开始发送消息。</p>
+<p>B 用以记录接收到 A 发来消息数量的条目以<code>{credit_to, To}</code>为键，To 为进程 A 的 Pid。当 B 接收到超过 MoreCreditAfter 条消息后，会向 A 发送一条形如<code>{bump_credit, {self{}, Quantity}}</code>的消息，向 A 授予 credit, 这里的<code>self()</code>指的是 B 进程自身。值得注意的是，B 此时可能也被阻塞了，无法发送授予 credit 的消息，该消息暂时被放入键值对条目<code>{credit_deferred}</code> 中，直到条目<code>{credit_blocked}</code>内容为空，解除阻塞，再从<code>{credit_deferred}</code> 中取出被阻塞的消息重新发送。</p>
+<p>对于 RabbitMQ 进程模型，如果 rabbit_reader 由于缺乏来自 rabbit_channel 授予的 credit 被阻塞，自然 client 也无法继续向下发布消息，由于每个 client 连接对应一对 rabbit_reader 与 rabbit_writer 进程，因此这种流控机制被认为是 Per-Connection 的。</p>
 <h2 id="References"><a href="#References" class="headerlink" title="References"></a>References</h2><ul>
 <li><a href="http://www.rabbitmq.com/configure.html" target="_blank" rel="noopener">http://www.rabbitmq.com/configure.html</a></li>
 <li><a href="http://www.rabbitmq.com/memory.html" target="_blank" rel="noopener">http://www.rabbitmq.com/memory.html</a></li>
 <li><a href="http://www.rabbitmq.com/production-checklist.html#resource-limits-ram" target="_blank" rel="noopener">http://www.rabbitmq.com/production-checklist.html#resource-limits-ram</a></li>
+<li><a href="http://alvaro-videla.com/2013/09/rabbitmq-internals-credit-flow-for-erlang-processes.html" target="_blank" rel="noopener">http://alvaro-videla.com/2013/09/rabbitmq-internals-credit-flow-for-erlang-processes.html</a></li>
+<li><a href="https://cloud.tencent.com/developer/article/1177577" target="_blank" rel="noopener">https://cloud.tencent.com/developer/article/1177577</a></li>
 </ul>
 
       
@@ -563,8 +580,7 @@
           
 
           <div id="music163player">
-            <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width=330 height=86 src="//music.163.com/outchain/player?type=2&id=536622304&auto=1&height=66">
-            </iframe>
+            <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width=330 height=86 src="//music.163.com/outchain/player?type=2&id=544636427&auto=1&height=66"></iframe>
           </div>
 
           
@@ -582,7 +598,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#内存流控的相关参数"><span class="nav-number">1.</span> <span class="nav-text">内存流控的相关参数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#流控机制的相关原理"><span class="nav-number">2.</span> <span class="nav-text">流控机制的相关原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#References"><span class="nav-number">3.</span> <span class="nav-text">References</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Memory-Based-Flow-Control"><span class="nav-number">1.</span> <span class="nav-text">Memory-Based Flow Control</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Per-Connection-Flow-Control"><span class="nav-number">2.</span> <span class="nav-text">Per-Connection Flow Control</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#References"><span class="nav-number">3.</span> <span class="nav-text">References</span></a></li></ol></div>
             
 
           </div>

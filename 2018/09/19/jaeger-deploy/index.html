@@ -1,371 +1,160 @@
 <!DOCTYPE html>
-
-
-
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   
-
-
-<html class="theme-next pisces use-motion" lang="zh-Hans">
-<head>
-  <meta charset="UTF-8"/>
-<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
-<meta name="theme-color" content="#222">
-
-
-
-
-
-
-
-
-
-<meta http-equiv="Cache-Control" content="no-transform" />
-<meta http-equiv="Cache-Control" content="no-siteapp" />
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  <title>Jaeger on Kubernetes 部署总结 | mathspandaのNotes</title>
   
+  <meta name="HandheldFriendly" content="True">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="shortcut icon" href="/">
+  <link rel="alternate" href="/atom.xml" title="mathspandaのNotes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <link rel="shortcut icon" href="">
+  <link rel="icon" href="">
   
-  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
-
-
-
-
-
-
-
-<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
-
-<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
-
-
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
-
-
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
-
-
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
-
-
-  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
-
-
-
-
-
-  <meta name="keywords" content="jaeger,kubernetes,tracing," />
-
-
-
-
-
-
-
-
-
-
-<meta name="description" content="根据 Jaeger 1.6 官方的部署文档，部署一个完整的 Jaeger 分布式链路追踪系统需要部署以下组件：">
-<meta name="keywords" content="jaeger,kubernetes,tracing">
-<meta property="og:type" content="article">
-<meta property="og:title" content="Jaeger on Kubernetes 部署总结">
-<meta property="og:url" content="http://yoursite.com/2018/09/19/jaeger-deploy/index.html">
-<meta property="og:site_name" content="mathspandaの博客">
-<meta property="og:description" content="根据 Jaeger 1.6 官方的部署文档，部署一个完整的 Jaeger 分布式链路追踪系统需要部署以下组件：">
-<meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="http://opx9yhs83.bkt.clouddn.com/jaeger-architecture.png">
-<meta property="og:updated_time" content="2018-10-27T04:18:34.483Z">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Jaeger on Kubernetes 部署总结">
-<meta name="twitter:description" content="根据 Jaeger 1.6 官方的部署文档，部署一个完整的 Jaeger 分布式链路追踪系统需要部署以下组件：">
-<meta name="twitter:image" content="http://opx9yhs83.bkt.clouddn.com/jaeger-architecture.png">
-
-
-
-<script type="text/javascript" id="hexo.configurations">
-  var NexT = window.NexT || {};
-  var CONFIG = {
-    root: '/',
-    scheme: 'Pisces',
-    version: '5.1.4',
-    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
-    fancybox: true,
-    tabs: true,
-    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
-    duoshuo: {
-      userId: '0',
-      author: '博主'
-    },
-    algolia: {
-      applicationID: '',
-      apiKey: '',
-      indexName: '',
-      hits: {"per_page":10},
-      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+  <link href="https://fonts.googleapis.com/css?family=Ubuntu|Ubuntu+Mono" rel="stylesheet">
+  
+  <!-- <link href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"> -->
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">
+  <link href="//cdn.bootcss.com/node-waves/0.7.5/waves.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <script>
+    function setLoadingBarProgress(num) {
+      document.getElementById('loading-bar').style.width=num+"%";
     }
-  };
-</script>
-
-
-
-  <link rel="canonical" href="http://yoursite.com/2018/09/19/jaeger-deploy/"/>
-
-
-
-
-
-  <title>Jaeger on Kubernetes 部署总结 | mathspandaの博客</title>
-  
-
-
-
-
-
-
-
-
+  </script>
 </head>
-
-<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
-
-  
-  
-    
-  
-
-  <div class="container sidebar-position-left page-post-detail">
-    <div class="headband"></div>
-
-    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
-      <div class="header-inner"><div class="site-brand-wrapper">
-  <div class="site-meta ">
-    
-
-    <div class="custom-logo-site-title">
-      <a href="/"  class="brand" rel="start">
-        <span class="logo-line-before"><i></i></span>
-        <span class="site-title">mathspandaの博客</span>
-        <span class="logo-line-after"><i></i></span>
-      </a>
-    </div>
-      
-        <p class="site-subtitle"></p>
-      
-  </div>
-
-  <div class="site-nav-toggle">
-    <button>
-      <span class="btn-bar"></span>
-      <span class="btn-bar"></span>
-      <span class="btn-bar"></span>
-    </button>
-  </div>
+</html>
+<body>
+    <div id="loading-bar-wrapper">
+  <div id="loading-bar" class="material"></div>
 </div>
 
-<nav class="site-nav">
-  
-
-  
-    <ul id="menu" class="menu">
-      
-        
-        <li class="menu-item menu-item-home">
-          <a href="/" rel="section">
+    <script>setLoadingBarProgress(20)</script>
+    <header class="l_header material">
+	<div class="wrapper">
+		<div class="nav-main container container--flex">
+			<a class="logo flat-box" href="/">mathspandaのNotes</a>
+				<div class="menu">
+					<ul class="h-list">
             
-              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
-            
-            首页
-          </a>
-        </li>
-      
-        
-        <li class="menu-item menu-item-tags">
-          <a href="/tags/" rel="section">
-            
-              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
-            
-            标签
-          </a>
-        </li>
-      
-        
-        <li class="menu-item menu-item-categories">
-          <a href="/categories/" rel="section">
-            
-              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
-            
-            分类
-          </a>
-        </li>
-      
-        
-        <li class="menu-item menu-item-archives">
-          <a href="/archives/" rel="section">
-            
-              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
-            
-            归档
-          </a>
-        </li>
-      
-        
-        <li class="menu-item menu-item-readings">
-          <a href="/readings/" rel="section">
-            
-              <i class="menu-item-icon fa fa-fw fa-book"></i> <br />
-            
-            读书
-          </a>
-        </li>
-      
-        
-        <li class="menu-item menu-item-about">
-          <a href="/about/" rel="section">
-            
-              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
-            
-            关于
-          </a>
-        </li>
-      
+    					
+    						<li>
+    							<a class="nav- flat-box" href="/">
+    								<i class="fas fa-home fa-fw"></i>&nbsp;主页
+  								</a>
+  							</li>
+        			
+    						<li>
+    							<a class="nav-archives flat-box" href="/archives/">
+    								<i class="fas fa-archive fa-fw"></i>&nbsp;归档
+  								</a>
+  							</li>
+        			
+    						<li>
+    							<a class="nav- flat-box" href="/readings/">
+    								<i class="fas fa-book fa-fw"></i>&nbsp;读书
+  								</a>
+  							</li>
+        			
+    						<li>
+    							<a class="nav- flat-box" href="/about/">
+    								<i class="fas fa-user fa-fw"></i>&nbsp;关于
+  								</a>
+  							</li>
+        			
+        		
+					</ul>
+					<div class="underline"></div>
+				</div>
 
-      
-    </ul>
-  
+			
+				<div class="m_search">
+					<form name="searchform" class="form u-search-form">
+						<input type="text" class="input u-search-input" placeholder="Search">
+						<span class="icon"><i class="fas fa-search fa-fw"></i></span>
+					</form>
+				</div>
+			
+			<ul class="switcher h-list">
+				
+					<li class="s-search"><a class="fas fa-search fa-fw" href="javascript:void(0)"></a></li>
+				
+				<li class="s-menu"><a class="fas fa-bars fa-fw" href="javascript:void(0)"></a></li>
+			</ul>
+		</div>
 
-  
-</nav>
-
-
-
- </div>
-    </header>
-
-    <main id="main" class="main">
-      <div class="main-inner">
-        <div class="content-wrap">
-          <div id="content" class="content">
-            
-
-  <div id="posts" class="posts-expand">
-    
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/09/19/jaeger-deploy/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="mathspanda">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="http://img.qqzhi.com/upload/img_5_1850635257D4274074374_23.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="mathspandaの博客">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">Jaeger on Kubernetes 部署总结</h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
+		<div class="nav-sub container container--flex">
+			<a class="logo flat-box"></a>
+			<ul class="switcher h-list">
+				<li class="s-comment"><a class="fas fa-comments fa-fw" href="javascript:void(0)"></a></li>
+				<li class="s-top"><a class="fas fa-arrow-circle-up fa-fw" href="javascript:void(0)"></a></li>
+				<li class="s-toc"><a class="fas fa-list fa-fw" href="javascript:void(0)"></a></li>
+			</ul>
+		</div>
+	</div>
+</header>
+	<aside class="menu-phone">
+		<nav>
+      <ul>
+          
               
-                <span class="post-meta-item-text">发表于</span>
+                  <li>
+                      <a class="nav- flat-box nav flat-box" href="/">
+                      <i class="fas fa-home fa-fw"></i>&nbsp;主页</a>
+                  </li>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-09-19T17:58:02+08:00">
-                2018-09-19
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
+                  <li>
+                      <a class="nav-archives flat-box nav flat-box" href="/archives/">
+                      <i class="fas fa-archive fa-fw"></i>&nbsp;归档</a>
+                  </li>
               
-                <span class="post-meta-item-text">分类于</span>
+                  <li>
+                      <a class="nav- flat-box nav flat-box" href="/readings/">
+                      <i class="fas fa-book fa-fw"></i>&nbsp;读书</a>
+                  </li>
               
+                  <li>
+                      <a class="nav- flat-box nav flat-box" href="/about/">
+                      <i class="fas fa-user fa-fw"></i>&nbsp;关于</a>
+                  </li>
               
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Tracing/" itemprop="url" rel="index">
-                    <span itemprop="name">Tracing</span>
-                  </a>
-                </span>
+       
+      </ul>
+		</nav>
+	</aside>
 
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
+    <script>setLoadingBarProgress(40);</script>
+    <div class="l_body">
+    <div class='container clearfix'>
+        <div class='l_main'>
+            <article id="post-jaeger-deploy" class="post white-box article-type-post" itemscope="" itemprop="blogPost">
+    <section class="meta">
+        
+            <h1 class="title">Jaeger on Kubernetes 部署总结</h1>
+        
+        <time class="time">
+            <i class="fas fa-calendar-alt fa-fw" aria-hidden="true"></i>
+            2018-09-19
+        </time>
+        
     
+    <div class="cats">
+        <i class="fas fa-folder-open fa-fw" aria-hidden="true"></i>
+        <a class="categories" href="/categories/Tracing/">Tracing</a>
+    </div>
 
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
 
-      
-      
+    </section>
 
-      
-        <p>根据 Jaeger 1.6 官方的<a href="https://www.jaegertracing.io/docs/1.6/deployment/" target="_blank" rel="noopener">部署文档</a>，部署一个完整的 Jaeger 分布式链路追踪系统需要部署以下组件：</p>
-<p><img src="http://opx9yhs83.bkt.clouddn.com/jaeger-architecture.png" alt="jaeger架构"></p>
+    <section class="article typo">
+
+        <div class="article-entry" itemprop="articleBody">
+            <p>根据 Jaeger 1.6 官方的<a href="https://www.jaegertracing.io/docs/1.6/deployment/" target="_blank" rel="noopener">部署文档</a>，部署一个完整的 Jaeger 分布式链路追踪系统需要部署以下组件：</p>
+<p><img src="https://s1.ax1x.com/2018/11/24/FkSD54.png" width="70%" height="70%" title="jaeger架构"></p>
 <a id="more"></a>
 <ul>
 <li><strong>storage backend</strong>: 存储 trace 数据，支持 elasticsearch / cassandra / memory（仅支持 all-in-one 部署）以及 kafka（不完善，最新 1.6 版本仅支持写 trace，查询时需对接另一种 storage backend），通过环境变量 <code>SPAN_STORAGE_TYPE</code> 指定。</li>
@@ -394,12 +183,12 @@
 </ul>
 <p>此处选择 es 集群（对 es 运维比较熟悉），es 从 jaeger 0.6.0 时即开始支持，且不需要作手动初始化（cassandra 需手动创建 schema）。</p>
 <h2 id="jaeger-kubernetes-vs-jaeger-helm-chart"><a href="#jaeger-kubernetes-vs-jaeger-helm-chart" class="headerlink" title="jaeger-kubernetes vs jaeger-helm-chart"></a>jaeger-kubernetes vs jaeger-helm-chart</h2><p><a href="https://github.com/helm/charts" target="_blank" rel="noopener">helm charts</a> 中包含了一个 <a href="https://github.com/helm/charts/tree/master/incubator/jaeger" target="_blank" rel="noopener">jaeger helm chart</a>，尚处于 incubator 阶段，到当前为止已有 4 个月未作任何更新，且版本较老，因此暂时放弃。</p>
-<p><a href="https://github.com/jaegertracing/jaeger-kubernetes" target="_blank" rel="noopener">jaeger-kubernetes</a> 项目中包含了将 jaeger 组件分散部署的 <a href="https://github.com/jaegertracing/jaeger-kubernetes/blob/master/jaeger-production-template.yml" target="_blank" rel="noopener">yml 文件</a>，通过以下命令可创建一个分散部署的 jaeger：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># 创建包含 es / jaeger 配置文件的 ConfigMap</span><br><span class="line">kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-kubernetes/master/production-elasticsearch/configmap.yml</span><br><span class="line"># 创建单点 elasticsearch 集群</span><br><span class="line">kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-kubernetes/master/production-elasticsearch/elasticsearch.yml</span><br><span class="line"># 创建组件分散部署的 jaeger（agent 通过 daemonset 部署）</span><br><span class="line">kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-kubernetes/master/jaeger-production-template.yml</span><br></pre></td></tr></table></figure></p>
+<p><a href="https://github.com/jaegertracing/jaeger-kubernetes" target="_blank" rel="noopener">jaeger-kubernetes</a> 项目中包含了将 jaeger 组件分散部署的 <a href="https://github.com/jaegertracing/jaeger-kubernetes/blob/master/jaeger-production-template.yml" target="_blank" rel="noopener">yml 文件</a>，通过以下命令可创建一个分散部署的 jaeger：s<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 创建包含 es / jaeger 配置文件的 ConfigMap</span><br><span class="line"><span class="meta">$</span> kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-kubernetes/master/production-elasticsearch/configmap.yml </span><br><span class="line"><span class="meta">#</span> 创建单点 elasticsearch 集群</span><br><span class="line"><span class="meta">$</span> kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-kubernetes/master/production-elasticsearch/elasticsearch.yml </span><br><span class="line"><span class="meta">#</span> 创建组件分散部署的 jaeger（agent 通过 daemonset 部署）</span><br><span class="line"><span class="meta">$</span> kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-kubernetes/master/jaeger-production-template.yml</span><br></pre></td></tr></table></figure></p>
 <p>通过上述方式部署的 es 集群采用的是 emptyDir volume，且以单点方式部署，同样不适用于生产环境。因此需要在使用上述 configmap.yml 与 jaeger-production-template.yml 部署 jaeger 之前，单独建立一个高可靠可用的 es 集群，通过 ceph/glusterfs 等存储保障 trace 数据不丢失。</p>
 <blockquote>
 <p>以上面的 yml 文件为基础，可以自行编写一套 helm chart，扩展各种 spec 配置，如 resource 和 affinity 等。</p>
 </blockquote>
-<h2 id="部署步骤"><a href="#部署步骤" class="headerlink" title="部署步骤"></a>部署步骤</h2><h3 id="创建-elasticsearch-集群"><a href="#创建-elasticsearch-集群" class="headerlink" title="创建 elasticsearch 集群"></a>创建 elasticsearch 集群</h3><p>假设当前 kubernetes 集群上包含 ceph storageclass，借助 helm charts 中的 <a href="https://github.com/helm/charts/tree/master/incubator/elasticsearch" target="_blank" rel="noopener">elasticsearch helm chart</a>：<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">helm template elasticsearch --name jaeger-es --set cluster.name=tracing-es --set master.persistence.storageClass=ceph --set data.persistence.storageClass=ceph &gt; jaeger-es.yaml</span><br><span class="line">kubectl create -f jaeger-es.yaml -n $&#123;namespace&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="部署步骤"><a href="#部署步骤" class="headerlink" title="部署步骤"></a>部署步骤</h2><h3 id="创建-elasticsearch-集群"><a href="#创建-elasticsearch-集群" class="headerlink" title="创建 elasticsearch 集群"></a>创建 elasticsearch 集群</h3><p>假设当前 kubernetes 集群上包含 ceph storageclass，借助 helm charts 中的 <a href="https://github.com/helm/charts/tree/master/incubator/elasticsearch" target="_blank" rel="noopener">elasticsearch helm chart</a>：<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span> helm template elasticsearch --name jaeger-es --set cluster.name=tracing-es --set master.persistence.storageClass=ceph --set data.persistence.storageClass=ceph &gt; jaeger-es.yaml</span><br><span class="line"><span class="meta">$</span> kubectl create -f jaeger-es.yaml -n $&#123;namespace&#125;</span><br></pre></td></tr></table></figure></p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">root@lin-k8s-dev1:~# kubectl -n $&#123;namespace&#125; get po | grep jaeger-es</span><br><span class="line">jaeger-es-elasticsearch-client-54666b4cf5-7lpbg   1/1       Running   2          1d</span><br><span class="line">jaeger-es-elasticsearch-client-54666b4cf5-scw79   1/1       Running   2          1d</span><br><span class="line">jaeger-es-elasticsearch-data-0                    1/1       Running   0          1d</span><br><span class="line">jaeger-es-elasticsearch-data-1                    1/1       Running   0          1d</span><br><span class="line">jaeger-es-elasticsearch-master-0                  1/1       Running   0          1d</span><br><span class="line">jaeger-es-elasticsearch-master-1                  1/1       Running   0          1d</span><br><span class="line">jaeger-es-elasticsearch-master-2                  1/1       Running   0          1d</span><br><span class="line">root@lin-k8s-dev1:~# kubectl -n $&#123;namespace&#125; get sts | grep jaeger-es</span><br><span class="line">jaeger-es-elasticsearch-data     2         2         1d</span><br><span class="line">jaeger-es-elasticsearch-master   3         3         1d</span><br><span class="line">root@lin-k8s-dev1:~# kubectl -n $&#123;namespace&#125; get deploy | grep jaeger-es</span><br><span class="line">jaeger-es-elasticsearch-client   2         2         2            2           1d</span><br><span class="line">root@lin-k8s-dev1:~# kubectl -n $&#123;namespace&#125; get cm | grep jaeger-es</span><br><span class="line">jaeger-es-elasticsearch                 4         1d</span><br><span class="line">root@lin-k8s-dev1:~# kubectl -n $&#123;namespace&#125; get svc | grep jaeger-es</span><br><span class="line">jaeger-es-elasticsearch-client      ClusterIP      10.109.173.100   &lt;none&gt;        9200/TCP                                                                                                                  1d</span><br><span class="line">jaeger-es-elasticsearch-discovery   ClusterIP      None             &lt;none&gt;        9300/TCP</span><br></pre></td></tr></table></figure>
 <p>默认情况下会创建 es master statefulset (replica=3)、data statefulset (replica=2) 以及 client deployment (replica=2)。</p>
 <blockquote>
@@ -423,414 +212,261 @@
 <h3 id="监控"><a href="#监控" class="headerlink" title="监控"></a>监控</h3><p>监控 elasticsearch 集群可直接采用开源项目 <a href="https://github.com/justwatchcom/elasticsearch_exporter" target="_blank" rel="noopener">elasticsearch_exporter</a>，helm charts 中包含了相应的部署 <a href="https://github.com/helm/charts/tree/master/stable/elasticsearch-exporter" target="_blank" rel="noopener">chart</a>。</p>
 <p>jaeger 各组件的 metrics 可通过相应的 <a href="https://www.jaegertracing.io/docs/1.6/monitoring/#metrics" target="_blank" rel="noopener">HTTP 端口</a> 得到。根据 jaeger 的 metrics，可以对组件的一些配置进行调整（edit configmap）。以 jaeger-collector 暴露的 spans_dropped 指标为例，往往是由于内部的 queue overflow 导致，可以相应调大 collector 的参数 <code>collector.queue-size</code>（默认为 2000），并依次重启 jaeger-collector pod。</p>
 
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-        <div class="post-tags">
-          
-            <a href="/tags/jaeger/" rel="tag"># jaeger</a>
-          
-            <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
-          
-            <a href="/tags/tracing/" rel="tag"># tracing</a>
-          
         </div>
-      
 
-      
-      
-      
-
-      
-        <div class="post-nav">
-          <div class="post-nav-next post-nav-item">
+        <section class="meta">
             
-              <a href="/2018/06/24/rabbitmq-flow-control/" rel="next" title="RabbitMQ 之 Flow Control 机制">
-                <i class="fa fa-chevron-left"></i> RabbitMQ 之 Flow Control 机制
-              </a>
+                
+                <div class="tags">
+                    <i class="fas fa-tags fa-fw" aria-hidden="true"></i>
+                    <a class="tag" href="/tags/kubernetes/">kubernetes</a>, <a class="tag" href="/tags/jaeger/">jaeger</a>, <a class="tag" href="/tags/tracing/">tracing</a>
+                </div>
             
-          </div>
+        </section>
 
-          <span class="post-nav-divider"></span>
-
-          <div class="post-nav-prev post-nav-item">
-            
-          </div>
-        </div>
-      
-
-      
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-
-    <div class="post-spread">
-      
-    </div>
-  </div>
-
-
-          </div>
-          
-
-
-          
-
-  
-
-
-
-        </div>
         
-          
-  
-  <div class="sidebar-toggle">
-    <div class="sidebar-toggle-line-wrap">
-      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
-      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
-      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
-    </div>
-  </div>
-
-  <aside id="sidebar" class="sidebar">
-    
-    <div class="sidebar-inner">
-
-      
-
-      
-        <ul class="sidebar-nav motion-element">
-          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
-            文章目录
-          </li>
-          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
-            站点概览
-          </li>
-        </ul>
-      
-
-      <section class="site-overview-wrap sidebar-panel">
-        <div class="site-overview">
-          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
-            
-              <img class="site-author-image" itemprop="image"
-                src="http://img.qqzhi.com/upload/img_5_1850635257D4274074374_23.jpg"
-                alt="mathspanda" />
-            
-              <p class="site-author-name" itemprop="name">mathspanda</p>
-              <p class="site-description motion-element" itemprop="description">聪明人才知道自己是笨蛋</p>
-          </div>
-
-          <nav class="site-state motion-element">
-
-            
-              <div class="site-state-item site-state-posts">
-              
-                <a href="/archives/">
-              
-                  <span class="site-state-item-count">4</span>
-                  <span class="site-state-item-name">日志</span>
-                </a>
-              </div>
-            
-
-            
-              
-              
-              <div class="site-state-item site-state-categories">
-                <a href="/categories/index.html">
-                  <span class="site-state-item-count">4</span>
-                  <span class="site-state-item-name">分类</span>
-                </a>
-              </div>
-            
-
-            
-              
-              
-              <div class="site-state-item site-state-tags">
-                <a href="/tags/index.html">
-                  <span class="site-state-item-count">7</span>
-                  <span class="site-state-item-name">标签</span>
-                </a>
-              </div>
-            
-
-          </nav>
-
-          
-
-          
-            <div class="links-of-author motion-element">
+            <div class="prev-next">
                 
-                  <span class="links-of-author-item">
-                    <a href="https://github.com/mathspanda" target="_blank" title="GitHub">
-                      
-                        <i class="fa fa-fw fa-github"></i>GitHub</a>
-                  </span>
                 
-                  <span class="links-of-author-item">
-                    <a href="mailto:mathspanda826@gmail.com" target="_blank" title="E-Mail">
-                      
-                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
-                  </span>
+                    <section class="next">
+                        <span class="art-item-right" aria-hidden="true">
+                            <h6>下一篇&nbsp;<i class="fas fa-chevron-right" aria-hidden="true"></i></h6>
+                            <h4>
+                                <a href="/2018/06/24/rabbitmq-flow-control/" rel="prev" title="RabbitMQ 之 Flow Control 机制">
+                                    
+                                        RabbitMQ 之 Flow Control 机制
+                                    
+                                </a>
+                            </h4>
+                            
+                                
+                                <h6 class="tags">
+                                    <i class="fas fa-tags fa-fw" aria-hidden="true"></i>
+                                    <a class="tag" href="/tags/rabbitmq/">rabbitmq</a>
+                                </h6>
+                            
+                        </span>
+                    </section>
                 
             </div>
-          
+        
 
-          
-          
+    </section>
 
-          
-          
+</article>
 
-          <div id="music163player">
-            <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width=330 height=86 src="//music.163.com/outchain/player?type=2&id=544636427&auto=1&height=66"></iframe>
-          </div>
+<br>
 
-          
+<!-- 显示推荐文章和评论 -->
 
-        </div>
-      </section>
-
-      
-      <!--noindex-->
-        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
-          <div class="post-toc">
+    <article class="post white-box comments">
+        <section class="article typo">
 
             
-              
+                
+
+    <div class="recommended_posts">
+        <h4><i class="fas fa-bookmark fa-fw" aria-hidden="true"></i>&nbsp;你可能感兴趣的文章</h4>
+        <ul>
             
-
+                <li><a href="http://yoursite.com/2018/06/24/rabbitmq-flow-control/">RabbitMQ 之 Flow Control 机制</a></li>
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#jaeger-agent-daemonset-vs-sidecar-pod"><span class="nav-number">1.</span> <span class="nav-text">jaeger-agent daemonset vs sidecar pod</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#elasticsearch-vs-cassandra"><span class="nav-number">2.</span> <span class="nav-text">elasticsearch vs cassandra</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#jaeger-kubernetes-vs-jaeger-helm-chart"><span class="nav-number">3.</span> <span class="nav-text">jaeger-kubernetes vs jaeger-helm-chart</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#部署步骤"><span class="nav-number">4.</span> <span class="nav-text">部署步骤</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#创建-elasticsearch-集群"><span class="nav-number">4.1.</span> <span class="nav-text">创建 elasticsearch 集群</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#创建-jaeger"><span class="nav-number">4.2.</span> <span class="nav-text">创建 jaeger</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#与-istio-集成"><span class="nav-number">4.3.</span> <span class="nav-text">与 istio 集成</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#监控"><span class="nav-number">4.4.</span> <span class="nav-text">监控</span></a></li></ol></li></ol></div>
+                <li><a href="http://yoursite.com/2017/05/11/k8s-leader-election/">kubernetes leader election 源码分析</a></li>
             
-
-          </div>
-        </section>
-      <!--/noindex-->
-      
-
-      
-
+                <li><a href="http://yoursite.com/2016/11/13/docker-gitlab-jekins/">使用 GitLab/Jenkins/Registry on Docker 搭建 CI/CD 环境</a></li>
+            
+        </ul>
     </div>
-  </aside>
 
 
-        
-      </div>
-    </main>
+            
 
-    <footer id="footer" class="footer">
-      <div class="footer-inner">
-        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
-  <span class="with-love">
-    <i class="fa fa-user"></i>
-  </span>
-  <span class="author" itemprop="copyrightHolder">mathspanda</span>
+            
 
-  
-</div>
+                
 
+                
 
-  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+                
+            
+
+        </section>
+    </article>
 
 
-
-  <span class="post-meta-divider">|</span>
-
-
-
-  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
-
-
-
-
-        
-
-
-
-
-
-
-
-        
-      </div>
-    </footer>
-
-    
-      <div class="back-to-top">
-        <i class="fa fa-arrow-up"></i>
-        
-      </div>
-    
-
-    
-
-  </div>
-
-  
-
-<script type="text/javascript">
-  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
-    window.Promise = null;
-  }
+<script>
+    window.subData = {
+        title: 'Jaeger on Kubernetes 部署总结',
+        tools: true
+    }
 </script>
 
 
+        </div>
+        <aside class='l_side'>
+            
+    
+        
+  <section class="m_widget author">
+    
+      <div class="header">
+        <img class="avatar" src="http://img.qqzhi.com/upload/img_5_1850635257D4274074374_23.jpg">
+      </div>
+    
+    
+    
+      <div class="social-wrapper">
+        
+          
+            <a href="mailto:mathspanda826@gmail.com" class="social flat-box" target="_blank" rel="external"><i class="social fas fa-envelope" aria-hidden="true"></i></a>
+          
+        
+          
+            <a href="https://github.com/mathspanda" class="social flat-box" target="_blank" rel="external"><i class="social fab fa-github" aria-hidden="true"></i></a>
+          
+        
+          
+            <a href="https://weibo.com/mathspanda" class="social flat-box" target="_blank" rel="external"><i class="social fab fa-weibo" aria-hidden="true"></i></a>
+          
+        
+      </div>
+    
+  </section>
+
+
+    
+    
+        
+
+    
+    
+        <section class="m_widget categories">
+    <header class="header material">
+        <div><i class="fas fa-folder-open fa-fw" aria-hidden="true"></i>&nbsp;&nbsp;分类</div>
+    </header>
+    <div class="content material">
+        
+            <ul class="entry">
+                
+                    <li><a class="flat-box" href="/categories/Docker/"><div class="name">Docker</div><div class="badge">1</div></a></li>
+                
+                    <li><a class="flat-box" href="/categories/Kubernetes/"><div class="name">Kubernetes</div><div class="badge">1</div></a></li>
+                
+                    <li><a class="flat-box" href="/categories/RabbitMQ/"><div class="name">RabbitMQ</div><div class="badge">1</div></a></li>
+                
+                    <li><a class="flat-box" href="/categories/Tracing/"><div class="name">Tracing</div><div class="badge">1</div></a></li>
+                
+            </ul>
+        
+    </div>
+</section>
+
+    
+    
+        
+    <section class="m_widget tagcloud">
+        <header class="header material">
+            <div><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;&nbsp;标签</div>
+        </header>
+        <div class="content material">
+            <a href="/tags/devops/" style="font-size: 14px; color: #999">devops</a> <a href="/tags/docker/" style="font-size: 24px; color: #555">docker</a> <a href="/tags/jaeger/" style="font-size: 14px; color: #999">jaeger</a> <a href="/tags/jenkins/" style="font-size: 14px; color: #999">jenkins</a> <a href="/tags/kubernetes/" style="font-size: 24px; color: #555">kubernetes</a> <a href="/tags/rabbitmq/" style="font-size: 14px; color: #999">rabbitmq</a> <a href="/tags/tracing/" style="font-size: 14px; color: #999">tracing</a>
+        </div>
+    </section>
+
+
+    
+    
+        
+    <section class="m_widget toc-wrapper">
+        <header class="header material">
+            <div><i class="fas fa-list fa-fw" aria-hidden="true"></i>&nbsp;&nbsp;目录</div>
+            <div class="wrapper"><a class="s-toc rightBtn" title="固定到顶部" target="_blank" rel="external nofollow noopener noreferrer" href="javascript:void(0)"><i class="fas fa-thumbtack fa-fw"></i></a></div>
+        </header>
+        <div class="content material">
+            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#jaeger-agent-daemonset-vs-sidecar-pod"><span class="toc-text">jaeger-agent daemonset vs sidecar pod</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#elasticsearch-vs-cassandra"><span class="toc-text">elasticsearch vs cassandra</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#jaeger-kubernetes-vs-jaeger-helm-chart"><span class="toc-text">jaeger-kubernetes vs jaeger-helm-chart</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#部署步骤"><span class="toc-text">部署步骤</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#创建-elasticsearch-集群"><span class="toc-text">创建 elasticsearch 集群</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#创建-jaeger"><span class="toc-text">创建 jaeger</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#与-istio-集成"><span class="toc-text">与 istio 集成</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#监控"><span class="toc-text">监控</span></a></li></ol></li></ol>
+        </div>
+    </section>
+
+
+    
+    
+        <section class="m_widget music">
+    <header class="header material">
+        <div><i class="fas fa-headphones-alt fa-fw" aria-hidden="true"></i>&nbsp;&nbsp;音乐</div>
+        <a class="rightBtn" title="打开博主的网易云音乐主页" target="_blank" rel="external nofollow noopener noreferrer" href="https://music.163.com/#/playlist?id=32052195"><i class="fas fa-external-link-square-alt fa-fw"></i></a>
+    </header>
+    <div class="content material">
+        <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width="100%" height="450" src="//music.163.com/outchain/player?type=0&id=32052195&auto=0&height=450"></iframe>
+    </div>
+</section>
+
+    
+    
+
 
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
-  
-
-
-  
-
-
-  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
-
-  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
-
-
-
-  
-  
-
-
-  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
-
-  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
-
-
-
-  
-  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
-<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
-
-
-
-  
-
-
-  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
-
-
-
-  
-
-
-  
-
-
-
-
-	
-
-
-
-
-
-  
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-
-  
-
-  
-
-  
-
-  
-  
-
-  
-
-  
-
-  
-
+        </aside>
+        <script>setLoadingBarProgress(60);</script>
+    </div>
+    </div>
+    <footer id="footer" class="clearfix">
+    
+        <div class="social-wrapper">
+          
+              
+                  <a href="mailto:mathspanda826@gmail.com" class="social fas fa-envelope flat-box" target="_blank" rel="external"></a>
+              
+          
+              
+                  <a href="https://github.com/mathspanda" class="social fab fa-github flat-box" target="_blank" rel="external"></a>
+              
+          
+              
+                  <a href="https://weibo.com/mathspanda" class="social fab fa-weibo flat-box" target="_blank" rel="external"></a>
+              
+          
+        </div>
+    
+    <br>
+    <div>博客内容遵循 <a target="_blank" href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="licenses">知识共享 署名 - 非商业性 - 相同方式共享 4.0 国际协议</a></div>
+    <div>本站使用 <a href="https://xaoxuu.com/wiki/material-x/" target="_blank" class="codename">Material X</a> 作为主题，
+		总访问量为 <span id="busuanzi_value_site_pv"><i class="fas fa-spinner fa-spin fa-fw" aria-hidden="true"></i></span> 次。
+    </div>
+</footer>
+<!-- 根据页面mathjax变量决定是否加载MathJax数学公式js -->
+
+
+    <script>setLoadingBarProgress(80);</script>
+    <script src="//apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="//cdn.bootcss.com/node-waves/0.7.5/waves.min.js"></script>
+<script src="//cdn.bootcss.com/scrollReveal.js/3.3.2/scrollreveal.min.js"></script>
+<!-- 访问统计 -->
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<script src="/js/jquery.fitvids.js"></script>
+
+    <script>
+        var GOOGLE_CUSTOM_SEARCH_API_KEY = "";
+        var GOOGLE_CUSTOM_SEARCH_ENGINE_ID = "";
+        var ALGOLIA_API_KEY = "";
+        var ALGOLIA_APP_ID = "";
+        var ALGOLIA_INDEX_NAME = "";
+        var AZURE_SERVICE_NAME = "";
+        var AZURE_INDEX_NAME = "";
+        var AZURE_QUERY_KEY = "";
+        var BAIDU_API_ID = "";
+        var SEARCH_SERVICE = "hexo" || "hexo";
+        var ROOT = "/"||"/";
+        if(!ROOT.endsWith('/'))ROOT += '/';
+    </script>
+
+<script src="/js/search.js"></script>
+<script src="/js/app.js"></script>
+
+
+    
+    
+    
+
+
+    <script>setLoadingBarProgress(100);</script>
 </body>
-</html>

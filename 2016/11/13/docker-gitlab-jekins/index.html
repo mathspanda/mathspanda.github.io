@@ -1,371 +1,159 @@
 <!DOCTYPE html>
-
-
-
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   
-
-
-<html class="theme-next pisces use-motion" lang="zh-Hans">
-<head>
-  <meta charset="UTF-8"/>
-<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
-<meta name="theme-color" content="#222">
-
-
-
-
-
-
-
-
-
-<meta http-equiv="Cache-Control" content="no-transform" />
-<meta http-equiv="Cache-Control" content="no-siteapp" />
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  <title>使用 GitLab/Jenkins/Registry on Docker 搭建 CI/CD 环境 | mathspandaのNotes</title>
   
+  <meta name="HandheldFriendly" content="True">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="shortcut icon" href="/">
+  <link rel="alternate" href="/atom.xml" title="mathspandaのNotes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <link rel="shortcut icon" href="">
+  <link rel="icon" href="">
   
-  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
-
-
-
-
-
-
-
-<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
-
-<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
-
-
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
-
-
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
-
-
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
-
-
-  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
-
-
-
-
-
-  <meta name="keywords" content="docker,jenkins,devops," />
-
-
-
-
-
-
-
-
-
-
-<meta name="description" content="使用纯 Docker 环境搭建 CI/CD 环境的步骤如下：">
-<meta name="keywords" content="docker,jenkins,devops">
-<meta property="og:type" content="article">
-<meta property="og:title" content="使用 GitLab&#x2F;Jenkins&#x2F;Registry on Docker 搭建 CI&#x2F;CD 环境">
-<meta property="og:url" content="http://yoursite.com/2016/11/13/docker-gitlab-jekins/index.html">
-<meta property="og:site_name" content="mathspandaの博客">
-<meta property="og:description" content="使用纯 Docker 环境搭建 CI/CD 环境的步骤如下：">
-<meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="http://opx9yhs83.bkt.clouddn.com/jenkins-docker-config.png">
-<meta property="og:image" content="http://opx9yhs83.bkt.clouddn.com/jenkins-docker-build.png">
-<meta property="og:updated_time" content="2018-06-24T10:17:43.000Z">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="使用 GitLab&#x2F;Jenkins&#x2F;Registry on Docker 搭建 CI&#x2F;CD 环境">
-<meta name="twitter:description" content="使用纯 Docker 环境搭建 CI/CD 环境的步骤如下：">
-<meta name="twitter:image" content="http://opx9yhs83.bkt.clouddn.com/jenkins-docker-config.png">
-
-
-
-<script type="text/javascript" id="hexo.configurations">
-  var NexT = window.NexT || {};
-  var CONFIG = {
-    root: '/',
-    scheme: 'Pisces',
-    version: '5.1.4',
-    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
-    fancybox: true,
-    tabs: true,
-    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
-    duoshuo: {
-      userId: '0',
-      author: '博主'
-    },
-    algolia: {
-      applicationID: '',
-      apiKey: '',
-      indexName: '',
-      hits: {"per_page":10},
-      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+  <link href="https://fonts.googleapis.com/css?family=Ubuntu|Ubuntu+Mono" rel="stylesheet">
+  
+  <!-- <link href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"> -->
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">
+  <link href="//cdn.bootcss.com/node-waves/0.7.5/waves.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <script>
+    function setLoadingBarProgress(num) {
+      document.getElementById('loading-bar').style.width=num+"%";
     }
-  };
-</script>
-
-
-
-  <link rel="canonical" href="http://yoursite.com/2016/11/13/docker-gitlab-jekins/"/>
-
-
-
-
-
-  <title>使用 GitLab/Jenkins/Registry on Docker 搭建 CI/CD 环境 | mathspandaの博客</title>
-  
-
-
-
-
-
-
-
-
+  </script>
 </head>
-
-<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
-
-  
-  
-    
-  
-
-  <div class="container sidebar-position-left page-post-detail">
-    <div class="headband"></div>
-
-    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
-      <div class="header-inner"><div class="site-brand-wrapper">
-  <div class="site-meta ">
-    
-
-    <div class="custom-logo-site-title">
-      <a href="/"  class="brand" rel="start">
-        <span class="logo-line-before"><i></i></span>
-        <span class="site-title">mathspandaの博客</span>
-        <span class="logo-line-after"><i></i></span>
-      </a>
-    </div>
-      
-        <p class="site-subtitle"></p>
-      
-  </div>
-
-  <div class="site-nav-toggle">
-    <button>
-      <span class="btn-bar"></span>
-      <span class="btn-bar"></span>
-      <span class="btn-bar"></span>
-    </button>
-  </div>
+</html>
+<body>
+    <div id="loading-bar-wrapper">
+  <div id="loading-bar" class="material"></div>
 </div>
 
-<nav class="site-nav">
-  
-
-  
-    <ul id="menu" class="menu">
-      
-        
-        <li class="menu-item menu-item-home">
-          <a href="/" rel="section">
+    <script>setLoadingBarProgress(20)</script>
+    <header class="l_header material">
+	<div class="wrapper">
+		<div class="nav-main container container--flex">
+			<a class="logo flat-box" href="/">mathspandaのNotes</a>
+				<div class="menu">
+					<ul class="h-list">
             
-              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
-            
-            首页
-          </a>
-        </li>
-      
-        
-        <li class="menu-item menu-item-tags">
-          <a href="/tags/" rel="section">
-            
-              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
-            
-            标签
-          </a>
-        </li>
-      
-        
-        <li class="menu-item menu-item-categories">
-          <a href="/categories/" rel="section">
-            
-              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
-            
-            分类
-          </a>
-        </li>
-      
-        
-        <li class="menu-item menu-item-archives">
-          <a href="/archives/" rel="section">
-            
-              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
-            
-            归档
-          </a>
-        </li>
-      
-        
-        <li class="menu-item menu-item-readings">
-          <a href="/readings/" rel="section">
-            
-              <i class="menu-item-icon fa fa-fw fa-book"></i> <br />
-            
-            读书
-          </a>
-        </li>
-      
-        
-        <li class="menu-item menu-item-about">
-          <a href="/about/" rel="section">
-            
-              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
-            
-            关于
-          </a>
-        </li>
-      
+    					
+    						<li>
+    							<a class="nav- flat-box" href="/">
+    								<i class="fas fa-home fa-fw"></i>&nbsp;主页
+  								</a>
+  							</li>
+        			
+    						<li>
+    							<a class="nav-archives flat-box" href="/archives/">
+    								<i class="fas fa-archive fa-fw"></i>&nbsp;归档
+  								</a>
+  							</li>
+        			
+    						<li>
+    							<a class="nav- flat-box" href="/readings/">
+    								<i class="fas fa-book fa-fw"></i>&nbsp;读书
+  								</a>
+  							</li>
+        			
+    						<li>
+    							<a class="nav- flat-box" href="/about/">
+    								<i class="fas fa-user fa-fw"></i>&nbsp;关于
+  								</a>
+  							</li>
+        			
+        		
+					</ul>
+					<div class="underline"></div>
+				</div>
 
-      
-    </ul>
-  
+			
+				<div class="m_search">
+					<form name="searchform" class="form u-search-form">
+						<input type="text" class="input u-search-input" placeholder="Search">
+						<span class="icon"><i class="fas fa-search fa-fw"></i></span>
+					</form>
+				</div>
+			
+			<ul class="switcher h-list">
+				
+					<li class="s-search"><a class="fas fa-search fa-fw" href="javascript:void(0)"></a></li>
+				
+				<li class="s-menu"><a class="fas fa-bars fa-fw" href="javascript:void(0)"></a></li>
+			</ul>
+		</div>
 
-  
-</nav>
-
-
-
- </div>
-    </header>
-
-    <main id="main" class="main">
-      <div class="main-inner">
-        <div class="content-wrap">
-          <div id="content" class="content">
-            
-
-  <div id="posts" class="posts-expand">
-    
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2016/11/13/docker-gitlab-jekins/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="mathspanda">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="http://img.qqzhi.com/upload/img_5_1850635257D4274074374_23.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="mathspandaの博客">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">使用 GitLab/Jenkins/Registry on Docker 搭建 CI/CD 环境</h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
+		<div class="nav-sub container container--flex">
+			<a class="logo flat-box"></a>
+			<ul class="switcher h-list">
+				<li class="s-comment"><a class="fas fa-comments fa-fw" href="javascript:void(0)"></a></li>
+				<li class="s-top"><a class="fas fa-arrow-circle-up fa-fw" href="javascript:void(0)"></a></li>
+				<li class="s-toc"><a class="fas fa-list fa-fw" href="javascript:void(0)"></a></li>
+			</ul>
+		</div>
+	</div>
+</header>
+	<aside class="menu-phone">
+		<nav>
+      <ul>
+          
               
-                <span class="post-meta-item-text">发表于</span>
+                  <li>
+                      <a class="nav- flat-box nav flat-box" href="/">
+                      <i class="fas fa-home fa-fw"></i>&nbsp;主页</a>
+                  </li>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-11-13T11:40:35+08:00">
-                2016-11-13
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
+                  <li>
+                      <a class="nav-archives flat-box nav flat-box" href="/archives/">
+                      <i class="fas fa-archive fa-fw"></i>&nbsp;归档</a>
+                  </li>
               
-                <span class="post-meta-item-text">分类于</span>
+                  <li>
+                      <a class="nav- flat-box nav flat-box" href="/readings/">
+                      <i class="fas fa-book fa-fw"></i>&nbsp;读书</a>
+                  </li>
               
+                  <li>
+                      <a class="nav- flat-box nav flat-box" href="/about/">
+                      <i class="fas fa-user fa-fw"></i>&nbsp;关于</a>
+                  </li>
               
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Docker/" itemprop="url" rel="index">
-                    <span itemprop="name">Docker</span>
-                  </a>
-                </span>
+       
+      </ul>
+		</nav>
+	</aside>
 
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
+    <script>setLoadingBarProgress(40);</script>
+    <div class="l_body">
+    <div class='container clearfix'>
+        <div class='l_main'>
+            <article id="post-docker-gitlab-jekins" class="post white-box article-type-post" itemscope="" itemprop="blogPost">
+    <section class="meta">
+        
+            <h1 class="title">使用 GitLab/Jenkins/Registry on Docker 搭建 CI/CD 环境</h1>
+        
+        <time class="time">
+            <i class="fas fa-calendar-alt fa-fw" aria-hidden="true"></i>
+            2016-11-13
+        </time>
+        
     
+    <div class="cats">
+        <i class="fas fa-folder-open fa-fw" aria-hidden="true"></i>
+        <a class="categories" href="/categories/Docker/">Docker</a>
+    </div>
 
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
 
-      
-      
+    </section>
 
-      
-        <p>使用纯 Docker 环境搭建 CI/CD 环境的步骤如下：</p>
+    <section class="article typo">
+
+        <div class="article-entry" itemprop="articleBody">
+            <p>使用纯 Docker 搭建简易 CI/CD 环境，需要部署 GitLab/Jenkins/Regitry 组件。</p>
 <a id="more"></a>
 <h2 id="使用-Docker-搭建环境"><a href="#使用-Docker-搭建环境" class="headerlink" title="使用 Docker 搭建环境"></a>使用 Docker 搭建环境</h2><h3 id="GitLab"><a href="#GitLab" class="headerlink" title="GitLab"></a>GitLab</h3><p>参考 github 项目 <a href="https://github.com/sameersbn/docker-gitlab" target="_blank" rel="noopener">docker-gitlab</a>，可以通过 docker-compose 启动 GitLab，也可以分别启动 redis/postgresql/gitlab 容器并建立容器间的连接。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">wget https://raw.githubusercontent.com/sameersbn/docker-gitlab/master/docker-compose.yml</span><br><span class="line"><span class="meta">#</span> up 前按需更改下 volumes 配置</span><br><span class="line">docker-compose up</span><br></pre></td></tr></table></figure>
@@ -373,7 +161,7 @@
 <blockquote>
 <ol>
 <li>GitLab 容器需开放两个端口，10080 端口负责 Web 界面访问，10022 端口负责 push 和 pull 代码。 </li>
-<li>当前基本是默认配置启动 GitLab，对于生产环境下的 GitLab，需要通过<a href="https://github.com/sameersbn/docker-gitlab#available-configuration-parameters" target="_blank" rel="noopener">环境变量</a>配置一系列参数，如 LDAP 或 SSL 等。</li>
+<li>当前基本是默认配置启动 GitLab，对于生产环境下的 GitLab，需要通过<a href="https://github.com/sameersbn/docker-gitlab#available-configuration-parameters" target="_blank" rel="noopener">环境变量</a>配置一系列参数，如 LDAP 或者 SSL 等。</li>
 </ol>
 </blockquote>
 <h3 id="Jenkins"><a href="#Jenkins" class="headerlink" title="Jenkins"></a>Jenkins</h3><p>参考 github 项目 <a href="https://github.com/jenkinsci/docker" target="_blank" rel="noopener">jenkinsci/docker</a>，可以通过最新的 jenkins 镜像启动，也可以 clone 该项目并 docker build 该项目中的 Dockerfile。<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/jenkinsci/docker.git</span><br><span class="line">cd docker</span><br><span class="line">docker build -t jenkins:jenkinsci .</span><br><span class="line">docker run --name myjenkins -p 8080:8080 -p 50000:50000 -v /var/jenkins_home jenkins:jenkinsci</span><br></pre></td></tr></table></figure></p>
@@ -389,7 +177,7 @@
 <h3 id="Docker"><a href="#Docker" class="headerlink" title="Docker"></a>Docker</h3><p>Docker 安装就没啥好说了，不过由于之后需要在 Jenkins Build 的过程中连接外部 Docker Daemon，需设置<code>DOCKER_OPTS=&#39;-H unix:///var/run/docker.sock -H tcp://0.0.0.0.2375&#39;</code>，并重新启动 docker。默认情况下 Docker 仅仅采用 sock。当然，也可以通过挂载 docker.sock 到 Jenkins 容器的方式来连接外部 Daemon。</p>
 <h2 id="Docker-Container-作为-Jenkins-Slave"><a href="#Docker-Container-作为-Jenkins-Slave" class="headerlink" title="Docker Container 作为 Jenkins Slave"></a>Docker Container 作为 Jenkins Slave</h2><ul>
 <li>1 Jenkins 安装 Docker Plugin</li>
-<li>2 Jenkins-&gt;Manage Jenkins-&gt;Configure System 最下方会多出个 Cloud，点击 Add a new Cloud，填入 Docker URL、Images 和 <strong>Labels</strong> 等。可以点击 Test Connection 连接测试。<br><img src="http://opx9yhs83.bkt.clouddn.com/jenkins-docker-config.png" alt="jenkins-cloud-config"></li>
+<li>2 Jenkins-&gt;Manage Jenkins-&gt;Configure System 最下方会多出个 Cloud，点击 Add a new Cloud，填入 Docker URL、Images 和 <strong>Labels</strong> 等。可以点击 Test Connection 连接测试。<br><img src="https://s1.ax1x.com/2018/11/24/FkSdbT.png" alt="jenkins-cloud-config"></li>
 <li>3 在创建的 Jenkins Item 中，General-&gt;勾选 Restrict where this project can be run，在 Label Expression 中填入先前创建的 Cloud 的 Labels</li>
 <li>4 Jenkins Build 过程就会发生在该 Cloud 定义的容器中</li>
 </ul>
@@ -412,421 +200,268 @@
 <blockquote>
 <p>GitLab 触发 Webhook 可能会发生 403 或者 anonymous login 的异常情况，需要在 Jenkins-&gt;Manage Jenkins-&gt;Configure Global Security 中，勾选 Allow anonymous read access 与去掉勾选 Prevent Cross Site Request Forgery exploits。</p>
 </blockquote>
-<p><img src="http://opx9yhs83.bkt.clouddn.com/jenkins-docker-build.png" alt="jenkins-docker-build"></p>
+<p><img src="https://s1.ax1x.com/2018/11/24/FkSBaF.jpg" alt="jenkins-docker-build"></p>
 <h2 id="References"><a href="#References" class="headerlink" title="References"></a>References</h2><ul>
 <li><a href="http://www.open-open.com/lib/view/open1438009785316.html" target="_blank" rel="noopener">使用 Docker 搭建 GitLab 实践</a></li>
 <li><a href="https://my.oschina.net/donhui/blog/470372" target="_blank" rel="noopener">使用 docker 构建 jenkins 镜像并运行容器</a></li>
 <li><a href="https://devopscube.com/docker-containers-as-build-slaves-jenkins/" target="_blank" rel="noopener">How To Setup Docker Containers As Build Slaves For Jenkins</a></li>
 </ul>
 
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-        <div class="post-tags">
-          
-            <a href="/tags/docker/" rel="tag"># docker</a>
-          
-            <a href="/tags/jenkins/" rel="tag"># jenkins</a>
-          
-            <a href="/tags/devops/" rel="tag"># devops</a>
-          
         </div>
-      
 
-      
-      
-      
-
-      
-        <div class="post-nav">
-          <div class="post-nav-next post-nav-item">
+        <section class="meta">
             
-          </div>
-
-          <span class="post-nav-divider"></span>
-
-          <div class="post-nav-prev post-nav-item">
+                
+                <div class="tags">
+                    <i class="fas fa-tags fa-fw" aria-hidden="true"></i>
+                    <a class="tag" href="/tags/docker/">docker</a>, <a class="tag" href="/tags/jenkins/">jenkins</a>, <a class="tag" href="/tags/devops/">devops</a>
+                </div>
             
-              <a href="/2017/05/11/k8s-leader-election/" rel="prev" title="kubernetes leader election 源码分析">
-                kubernetes leader election 源码分析 <i class="fa fa-chevron-right"></i>
-              </a>
-            
-          </div>
-        </div>
-      
+        </section>
 
-      
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-
-    <div class="post-spread">
-      
-    </div>
-  </div>
-
-
-          </div>
-          
-
-
-          
-
-  
-
-
-
-        </div>
         
-          
-  
-  <div class="sidebar-toggle">
-    <div class="sidebar-toggle-line-wrap">
-      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
-      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
-      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
-    </div>
-  </div>
-
-  <aside id="sidebar" class="sidebar">
-    
-    <div class="sidebar-inner">
-
-      
-
-      
-        <ul class="sidebar-nav motion-element">
-          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
-            文章目录
-          </li>
-          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
-            站点概览
-          </li>
-        </ul>
-      
-
-      <section class="site-overview-wrap sidebar-panel">
-        <div class="site-overview">
-          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
-            
-              <img class="site-author-image" itemprop="image"
-                src="http://img.qqzhi.com/upload/img_5_1850635257D4274074374_23.jpg"
-                alt="mathspanda" />
-            
-              <p class="site-author-name" itemprop="name">mathspanda</p>
-              <p class="site-description motion-element" itemprop="description">聪明人才知道自己是笨蛋</p>
-          </div>
-
-          <nav class="site-state motion-element">
-
-            
-              <div class="site-state-item site-state-posts">
-              
-                <a href="/archives/">
-              
-                  <span class="site-state-item-count">4</span>
-                  <span class="site-state-item-name">日志</span>
-                </a>
-              </div>
-            
-
-            
-              
-              
-              <div class="site-state-item site-state-categories">
-                <a href="/categories/index.html">
-                  <span class="site-state-item-count">4</span>
-                  <span class="site-state-item-name">分类</span>
-                </a>
-              </div>
-            
-
-            
-              
-              
-              <div class="site-state-item site-state-tags">
-                <a href="/tags/index.html">
-                  <span class="site-state-item-count">7</span>
-                  <span class="site-state-item-name">标签</span>
-                </a>
-              </div>
-            
-
-          </nav>
-
-          
-
-          
-            <div class="links-of-author motion-element">
+            <div class="prev-next">
                 
-                  <span class="links-of-author-item">
-                    <a href="https://github.com/mathspanda" target="_blank" title="GitHub">
-                      
-                        <i class="fa fa-fw fa-github"></i>GitHub</a>
-                  </span>
+                    <section class="prev">
+                        <span class="art-item-left">
+                            <h6><i class="fas fa-chevron-left" aria-hidden="true"></i>&nbsp;上一篇</h6>
+                            <h4>
+                                <a href="/2017/05/11/k8s-leader-election/" rel="prev" title="kubernetes leader election 源码分析">
+                                  
+                                      kubernetes leader election 源码分析
+                                  
+                                </a>
+                            </h4>
+                            
+                                
+                                <h6 class="tags">
+                                    <i class="fas fa-tags fa-fw" aria-hidden="true"></i>
+                                    <a class="tag" href="/tags/kubernetes/">kubernetes</a>, <a class="tag" href="/tags/docker/">docker</a>
+                                </h6>
+                            
+                        </span>
+                    </section>
                 
-                  <span class="links-of-author-item">
-                    <a href="mailto:mathspanda826@gmail.com" target="_blank" title="E-Mail">
-                      
-                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
-                  </span>
                 
             </div>
-          
+        
 
-          
-          
+    </section>
 
-          
-          
+</article>
 
-          <div id="music163player">
-            <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width=330 height=86 src="//music.163.com/outchain/player?type=2&id=544636427&auto=1&height=66"></iframe>
-          </div>
+<br>
 
-          
+<!-- 显示推荐文章和评论 -->
 
-        </div>
-      </section>
-
-      
-      <!--noindex-->
-        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
-          <div class="post-toc">
+    <article class="post white-box comments">
+        <section class="article typo">
 
             
-              
+                
+
+    <div class="recommended_posts">
+        <h4><i class="fas fa-bookmark fa-fw" aria-hidden="true"></i>&nbsp;你可能感兴趣的文章</h4>
+        <ul>
             
-
+                <li><a href="http://yoursite.com/2018/09/19/jaeger-deploy/">Jaeger on Kubernetes 部署总结</a></li>
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#使用-Docker-搭建环境"><span class="nav-number">1.</span> <span class="nav-text">使用 Docker 搭建环境</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#GitLab"><span class="nav-number">1.1.</span> <span class="nav-text">GitLab</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Jenkins"><span class="nav-number">1.2.</span> <span class="nav-text">Jenkins</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Registry"><span class="nav-number">1.3.</span> <span class="nav-text">Registry</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Docker"><span class="nav-number">1.4.</span> <span class="nav-text">Docker</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Docker-Container-作为-Jenkins-Slave"><span class="nav-number">2.</span> <span class="nav-text">Docker Container 作为 Jenkins Slave</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#利用-GitLab-Webhook-触发-Jenkins-Docker-Build-And-Publish"><span class="nav-number">3.</span> <span class="nav-text">利用 GitLab Webhook 触发 Jenkins Docker Build And Publish</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#References"><span class="nav-number">4.</span> <span class="nav-text">References</span></a></li></ol></div>
+                <li><a href="http://yoursite.com/2018/06/24/rabbitmq-flow-control/">RabbitMQ 之 Flow Control 机制</a></li>
             
-
-          </div>
-        </section>
-      <!--/noindex-->
-      
-
-      
-
+                <li><a href="http://yoursite.com/2017/05/11/k8s-leader-election/">kubernetes leader election 源码分析</a></li>
+            
+        </ul>
     </div>
-  </aside>
 
 
-        
-      </div>
-    </main>
+            
 
-    <footer id="footer" class="footer">
-      <div class="footer-inner">
-        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
-  <span class="with-love">
-    <i class="fa fa-user"></i>
-  </span>
-  <span class="author" itemprop="copyrightHolder">mathspanda</span>
+            
 
-  
-</div>
+                
 
+                
 
-  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+                
+            
+
+        </section>
+    </article>
 
 
-
-  <span class="post-meta-divider">|</span>
-
-
-
-  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
-
-
-
-
-        
-
-
-
-
-
-
-
-        
-      </div>
-    </footer>
-
-    
-      <div class="back-to-top">
-        <i class="fa fa-arrow-up"></i>
-        
-      </div>
-    
-
-    
-
-  </div>
-
-  
-
-<script type="text/javascript">
-  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
-    window.Promise = null;
-  }
+<script>
+    window.subData = {
+        title: '使用 GitLab/Jenkins/Registry on Docker 搭建 CI/CD 环境',
+        tools: true
+    }
 </script>
 
 
+        </div>
+        <aside class='l_side'>
+            
+    
+        
+  <section class="m_widget author">
+    
+      <div class="header">
+        <img class="avatar" src="http://img.qqzhi.com/upload/img_5_1850635257D4274074374_23.jpg">
+      </div>
+    
+    
+    
+      <div class="social-wrapper">
+        
+          
+            <a href="mailto:mathspanda826@gmail.com" class="social flat-box" target="_blank" rel="external"><i class="social fas fa-envelope" aria-hidden="true"></i></a>
+          
+        
+          
+            <a href="https://github.com/mathspanda" class="social flat-box" target="_blank" rel="external"><i class="social fab fa-github" aria-hidden="true"></i></a>
+          
+        
+          
+            <a href="https://weibo.com/mathspanda" class="social flat-box" target="_blank" rel="external"><i class="social fab fa-weibo" aria-hidden="true"></i></a>
+          
+        
+      </div>
+    
+  </section>
+
+
+    
+    
+        
+
+    
+    
+        <section class="m_widget categories">
+    <header class="header material">
+        <div><i class="fas fa-folder-open fa-fw" aria-hidden="true"></i>&nbsp;&nbsp;分类</div>
+    </header>
+    <div class="content material">
+        
+            <ul class="entry">
+                
+                    <li><a class="flat-box" href="/categories/Docker/"><div class="name">Docker</div><div class="badge">1</div></a></li>
+                
+                    <li><a class="flat-box" href="/categories/Kubernetes/"><div class="name">Kubernetes</div><div class="badge">1</div></a></li>
+                
+                    <li><a class="flat-box" href="/categories/RabbitMQ/"><div class="name">RabbitMQ</div><div class="badge">1</div></a></li>
+                
+                    <li><a class="flat-box" href="/categories/Tracing/"><div class="name">Tracing</div><div class="badge">1</div></a></li>
+                
+            </ul>
+        
+    </div>
+</section>
+
+    
+    
+        
+    <section class="m_widget tagcloud">
+        <header class="header material">
+            <div><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;&nbsp;标签</div>
+        </header>
+        <div class="content material">
+            <a href="/tags/devops/" style="font-size: 14px; color: #999">devops</a> <a href="/tags/docker/" style="font-size: 24px; color: #555">docker</a> <a href="/tags/jaeger/" style="font-size: 14px; color: #999">jaeger</a> <a href="/tags/jenkins/" style="font-size: 14px; color: #999">jenkins</a> <a href="/tags/kubernetes/" style="font-size: 24px; color: #555">kubernetes</a> <a href="/tags/rabbitmq/" style="font-size: 14px; color: #999">rabbitmq</a> <a href="/tags/tracing/" style="font-size: 14px; color: #999">tracing</a>
+        </div>
+    </section>
+
+
+    
+    
+        
+    <section class="m_widget toc-wrapper">
+        <header class="header material">
+            <div><i class="fas fa-list fa-fw" aria-hidden="true"></i>&nbsp;&nbsp;目录</div>
+            <div class="wrapper"><a class="s-toc rightBtn" title="固定到顶部" target="_blank" rel="external nofollow noopener noreferrer" href="javascript:void(0)"><i class="fas fa-thumbtack fa-fw"></i></a></div>
+        </header>
+        <div class="content material">
+            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#使用-Docker-搭建环境"><span class="toc-text">使用 Docker 搭建环境</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#GitLab"><span class="toc-text">GitLab</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Jenkins"><span class="toc-text">Jenkins</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Registry"><span class="toc-text">Registry</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Docker"><span class="toc-text">Docker</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Docker-Container-作为-Jenkins-Slave"><span class="toc-text">Docker Container 作为 Jenkins Slave</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#利用-GitLab-Webhook-触发-Jenkins-Docker-Build-And-Publish"><span class="toc-text">利用 GitLab Webhook 触发 Jenkins Docker Build And Publish</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#References"><span class="toc-text">References</span></a></li></ol>
+        </div>
+    </section>
+
+
+    
+    
+        <section class="m_widget music">
+    <header class="header material">
+        <div><i class="fas fa-headphones-alt fa-fw" aria-hidden="true"></i>&nbsp;&nbsp;音乐</div>
+        <a class="rightBtn" title="打开博主的网易云音乐主页" target="_blank" rel="external nofollow noopener noreferrer" href="https://music.163.com/#/playlist?id=32052195"><i class="fas fa-external-link-square-alt fa-fw"></i></a>
+    </header>
+    <div class="content material">
+        <iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width="100%" height="450" src="//music.163.com/outchain/player?type=0&id=32052195&auto=0&height=450"></iframe>
+    </div>
+</section>
+
+    
+    
+
 
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
-  
-
-
-  
-
-
-  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
-
-  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
-
-
-
-  
-  
-
-
-  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
-
-  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
-
-
-
-  
-  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
-<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
-
-
-
-  
-
-
-  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
-
-
-
-  
-
-
-  
-
-
-
-
-	
-
-
-
-
-
-  
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-
-  
-
-  
-
-  
-
-  
-  
-
-  
-
-  
-
-  
-
+        </aside>
+        <script>setLoadingBarProgress(60);</script>
+    </div>
+    </div>
+    <footer id="footer" class="clearfix">
+    
+        <div class="social-wrapper">
+          
+              
+                  <a href="mailto:mathspanda826@gmail.com" class="social fas fa-envelope flat-box" target="_blank" rel="external"></a>
+              
+          
+              
+                  <a href="https://github.com/mathspanda" class="social fab fa-github flat-box" target="_blank" rel="external"></a>
+              
+          
+              
+                  <a href="https://weibo.com/mathspanda" class="social fab fa-weibo flat-box" target="_blank" rel="external"></a>
+              
+          
+        </div>
+    
+    <br>
+    <div>博客内容遵循 <a target="_blank" href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="licenses">知识共享 署名 - 非商业性 - 相同方式共享 4.0 国际协议</a></div>
+    <div>本站使用 <a href="https://xaoxuu.com/wiki/material-x/" target="_blank" class="codename">Material X</a> 作为主题，
+		总访问量为 <span id="busuanzi_value_site_pv"><i class="fas fa-spinner fa-spin fa-fw" aria-hidden="true"></i></span> 次。
+    </div>
+</footer>
+<!-- 根据页面mathjax变量决定是否加载MathJax数学公式js -->
+
+
+    <script>setLoadingBarProgress(80);</script>
+    <script src="//apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="//cdn.bootcss.com/node-waves/0.7.5/waves.min.js"></script>
+<script src="//cdn.bootcss.com/scrollReveal.js/3.3.2/scrollreveal.min.js"></script>
+<!-- 访问统计 -->
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<script src="/js/jquery.fitvids.js"></script>
+
+    <script>
+        var GOOGLE_CUSTOM_SEARCH_API_KEY = "";
+        var GOOGLE_CUSTOM_SEARCH_ENGINE_ID = "";
+        var ALGOLIA_API_KEY = "";
+        var ALGOLIA_APP_ID = "";
+        var ALGOLIA_INDEX_NAME = "";
+        var AZURE_SERVICE_NAME = "";
+        var AZURE_INDEX_NAME = "";
+        var AZURE_QUERY_KEY = "";
+        var BAIDU_API_ID = "";
+        var SEARCH_SERVICE = "hexo" || "hexo";
+        var ROOT = "/"||"/";
+        if(!ROOT.endsWith('/'))ROOT += '/';
+    </script>
+
+<script src="/js/search.js"></script>
+<script src="/js/app.js"></script>
+
+
+    
+    
+    
+
+
+    <script>setLoadingBarProgress(100);</script>
 </body>
-</html>

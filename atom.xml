@@ -35,9 +35,9 @@
       <category term="Tracing" scheme="http://yoursite.com/categories/Tracing/"/>
     
     
-      <category term="jaeger" scheme="http://yoursite.com/tags/jaeger/"/>
-    
       <category term="kubernetes" scheme="http://yoursite.com/tags/kubernetes/"/>
+    
+      <category term="jaeger" scheme="http://yoursite.com/tags/jaeger/"/>
     
       <category term="tracing" scheme="http://yoursite.com/tags/tracing/"/>
     
@@ -87,9 +87,9 @@
       <category term="Kubernetes" scheme="http://yoursite.com/categories/Kubernetes/"/>
     
     
-      <category term="kubernetes" scheme="http://yoursite.com/tags/kubernetes/"/>
-    
       <category term="docker" scheme="http://yoursite.com/tags/docker/"/>
+    
+      <category term="kubernetes" scheme="http://yoursite.com/tags/kubernetes/"/>
     
   </entry>
   

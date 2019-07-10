@@ -19,9 +19,9 @@
       
         <tags>
             
-            <tag> kubernetes </tag>
-            
             <tag> jaeger </tag>
+            
+            <tag> kubernetes </tag>
             
             <tag> tracing </tag>
             

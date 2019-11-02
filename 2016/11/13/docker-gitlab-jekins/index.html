@@ -177,7 +177,7 @@
 <h3 id="Docker"><a href="#Docker" class="headerlink" title="Docker"></a>Docker</h3><p>Docker 安装就没啥好说了，不过由于之后需要在 Jenkins Build 的过程中连接外部 Docker Daemon，需设置<code>DOCKER_OPTS=&#39;-H unix:///var/run/docker.sock -H tcp://0.0.0.0.2375&#39;</code>，并重新启动 docker。默认情况下 Docker 仅仅采用 sock。当然，也可以通过挂载 docker.sock 到 Jenkins 容器的方式来连接外部 Daemon。</p>
 <h2 id="Docker-Container-作为-Jenkins-Slave"><a href="#Docker-Container-作为-Jenkins-Slave" class="headerlink" title="Docker Container 作为 Jenkins Slave"></a>Docker Container 作为 Jenkins Slave</h2><ul>
 <li>1 Jenkins 安装 Docker Plugin</li>
-<li>2 Jenkins-&gt;Manage Jenkins-&gt;Configure System 最下方会多出个 Cloud，点击 Add a new Cloud，填入 Docker URL、Images 和 <strong>Labels</strong> 等。可以点击 Test Connection 连接测试。<br><img src="https://s1.ax1x.com/2018/11/24/FkSdbT.png" alt="jenkins-cloud-config"></li>
+<li>2 Jenkins-&gt;Manage Jenkins-&gt;Configure System 最下方会多出个 Cloud，点击 Add a new Cloud，填入 Docker URL、Images 和 <strong>Labels</strong> 等，可以点击 Test Connection 连接测试</li>
 <li>3 在创建的 Jenkins Item 中，General-&gt;勾选 Restrict where this project can be run，在 Label Expression 中填入先前创建的 Cloud 的 Labels</li>
 <li>4 Jenkins Build 过程就会发生在该 Cloud 定义的容器中</li>
 </ul>
@@ -200,7 +200,7 @@
 <blockquote>
 <p>GitLab 触发 Webhook 可能会发生 403 或者 anonymous login 的异常情况，需要在 Jenkins-&gt;Manage Jenkins-&gt;Configure Global Security 中，勾选 Allow anonymous read access 与去掉勾选 Prevent Cross Site Request Forgery exploits。</p>
 </blockquote>
-<p><img src="https://s1.ax1x.com/2018/11/24/FkSBaF.jpg" alt="jenkins-docker-build"></p>
+<p><img src="http://mathspanda.coding.me/iss/pics/jenkins-docker-build.jpg" alt="jenkins-docker-build"></p>
 <h2 id="References"><a href="#References" class="headerlink" title="References"></a>References</h2><ul>
 <li><a href="http://www.open-open.com/lib/view/open1438009785316.html" target="_blank" rel="noopener">使用 Docker 搭建 GitLab 实践</a></li>
 <li><a href="https://my.oschina.net/donhui/blog/470372" target="_blank" rel="noopener">使用 docker 构建 jenkins 镜像并运行容器</a></li>

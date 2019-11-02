@@ -154,7 +154,7 @@
 
         <div class="article-entry" itemprop="articleBody">
             <p>根据 Jaeger 1.6 官方的<a href="https://www.jaegertracing.io/docs/1.6/deployment/" target="_blank" rel="noopener">部署文档</a>，部署一个完整的 Jaeger 分布式链路追踪系统需要部署以下组件：</p>
-<p><img src="https://s1.ax1x.com/2018/11/24/FkSD54.png" width="70%" height="70%" title="jaeger架构"></p>
+<p><img src="http://mathspanda.coding.me/iss/pics/jaeger-arch.png" width="70%" height="70%" title="jaeger架构"></p>
 <a id="more"></a>
 <ul>
 <li><strong>storage backend</strong>: 存储 trace 数据，支持 elasticsearch / cassandra / memory（仅支持 all-in-one 部署）以及 kafka（不完善，最新 1.6 版本仅支持写 trace，查询时需对接另一种 storage backend），通过环境变量 <code>SPAN_STORAGE_TYPE</code> 指定。</li>
